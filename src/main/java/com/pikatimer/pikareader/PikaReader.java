@@ -20,16 +20,8 @@ import com.pikatimer.pikareader.conf.PikaConfig;
 import com.pikatimer.pikareader.http.HTTPHandler;
 import com.pikatimer.pikareader.readers.ReaderHandler;
 import com.pikatimer.pikareader.tags.TagDB;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.time.ZoneId;
-import java.util.Enumeration;
-import java.util.HexFormat;
+import com.pikatimer.pikareader.util.DiscoveryListener;
 import java.util.Scanner;
-import java.util.logging.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,7 +77,10 @@ public class PikaReader {
 
         // TODO: Setup Raspberry PI interfaces
         // Start broadcast listener so others can find us
-        // 
+        
+        DiscoveryListener.startDiscoveryListener();
+        
+        // This is good for 
         System.out.println("Press Enter to exit.");
         Scanner s = new Scanner(System.in);
         s.nextLine();
