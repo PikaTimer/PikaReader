@@ -84,7 +84,7 @@ public class TagReadProcessor implements Runnable {
                 Thread.sleep(gating); // Gating Time
                 tagQueue.drainTo(tags);
 
-                logger.info("Recieved {} raw tag reads to process", tags.size());
+                logger.debug("Recieved {} raw tag reads to process", tags.size());
 
                 Map<String, TagRead> tagMap = new HashMap(1000);
                 Map<String, Double> antennaStatusMap = new HashMap(32);
