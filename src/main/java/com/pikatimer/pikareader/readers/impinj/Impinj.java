@@ -23,7 +23,6 @@ import com.impinj.octane.ReaderMode;
 import com.impinj.octane.ReportConfig;
 import com.impinj.octane.ReportMode;
 import com.impinj.octane.RshellEngine;
-import com.impinj.octane.RshellReply;
 import com.impinj.octane.SearchMode;
 import com.impinj.octane.Settings;
 import com.pikatimer.pikareader.readers.RFIDReader;
@@ -41,12 +40,12 @@ import org.slf4j.LoggerFactory;
 public class Impinj implements RFIDReader {
 
     private static final Logger logger = LoggerFactory.getLogger(Impinj.class);
-    ImpinjReader reader;
-    ImpinjPowerLevels powerLevel = ImpinjPowerLevels.HIGH;
+    private ImpinjReader reader;
+    private ImpinjPowerLevels powerLevel = ImpinjPowerLevels.HIGH; // 30.0dBm / 1.0W. A go-to value for most stuff. 
 
-    String readerIP = "192.168.1.131";
-    Integer readerID;
-    Boolean reading = false;
+    private final String readerIP;
+    private final Integer readerID;
+    private Boolean reading = false;
 
     public Impinj(Integer readerID, String readerIP) {
         this.readerID = readerID;
@@ -72,6 +71,7 @@ public class Impinj implements RFIDReader {
             RshellEngine rshell = new RshellEngine();
 
             /* login can take some time to give username and password */
+            
             rshell.openSecureSession(readerIP, "root", "impinj", 10000);
 
             String cmd = "config network ntp disable";
@@ -101,33 +101,6 @@ public class Impinj implements RFIDReader {
             logger.trace(reply);
             logger.debug("setClock() Timestamp: " + Instant.now());
             
-            /* 
-             * Sample from the code to send a command and 
-             * parse the output
-             * 
-
-            cmd = "show system platform";
-
-            reply = rshell.send(cmd);
-            logger.trace("Raw Reply");
-            logger.trace(reply);
-
-            // parse the output. This works on most commands
-            RshellReply r = new RshellReply(reply);
-
-            String status = r.get("StatusString");
-
-            if (status != null) {
-                logger.debug("Command returned: " + status);
-
-                if (status.equals("Success")) {
-                    String uptime = r.get("UptimeSeconds");
-                    if (uptime != null) {
-                        logger.debug("Uptime for unit is: {} seconds", uptime);
-                    }
-                }
-            } */
-
             rshell.close();
 
         } catch (OctaneSdkException ex) {
@@ -181,7 +154,7 @@ public class Impinj implements RFIDReader {
             antennas.disableAll();
             //antennas.enableById(new short[]{1});
             antennas.enableAll();
-            antennas.setTxPowerinDbm(30.0); // Decent balance of dBm to power requried. 
+            antennas.setTxPowerinDbm(powerLevel.getDBm()); 
             antennas.getAntenna((short) 1).setIsMaxRxSensitivity(true);
             //antennas.getAntenna((short) 1).setIsMaxTxPower(true);
             //antennas.getAntenna((short) 1).setTxPowerinDbm(32.0);
