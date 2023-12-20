@@ -21,14 +21,22 @@ import com.pikatimer.pikareader.conf.PikaConfig;
 import com.pikatimer.pikareader.readers.ReaderHandler;
 import com.pikatimer.pikareader.tags.TagDB;
 import com.pikatimer.pikareader.tags.TagRead;
+import com.pikatimer.pikareader.tags.TagReadRouter;
 import com.pikatimer.pikareader.util.DebugLogHolder;
 import io.javalin.Javalin;
 import io.javalin.http.staticfiles.Location;
+import io.javalin.websocket.WsCloseStatus;
 import io.javalin.websocket.WsContext;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
+import java.util.logging.Level;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -47,6 +55,7 @@ public class HTTPHandler {
     private static final PikaConfig pikaConfig = PikaConfig.getInstance();
     private final JSONObject webConfig;
 
+    private Thread javalinThread;
     private Javalin javalinApp;
     private static final List<WsContext> webSocketConnections = new ArrayList<>();
 
@@ -75,15 +84,14 @@ public class HTTPHandler {
 
         logger.info("Starting Javalin on port {}", webConfig.optIntegerObject("Port", 8080));
 
-        Thread t = new Thread(() -> {
-
+        javalinThread = new Thread(() -> {
             javalinApp = Javalin.create(config -> {
                 config.staticFiles.add("/public", Location.CLASSPATH);
             });
-
+            
             // WebSocket to send all events along
             javalinApp.ws("/events", ws -> {
-
+                
                 ws.onConnect(ctx -> {
                     ctx.enableAutomaticPings();
                     webSocketConnections.add(ctx);
@@ -92,33 +100,33 @@ public class HTTPHandler {
                     webSocketConnections.remove(ctx);
                 });
                 ws.onMessage(ctx -> {
-
+                    
                 });
             });
-
+            
             // Stop Reader
             javalinApp.get("/start", ctx -> {
                 readerHandler.setClocks();
                 readerHandler.startReading();
                 ctx.html("Starting Reader...");
             });
-
+            
             // Start Reader
             javalinApp.get("/stop", ctx -> {
                 readerHandler.stopReading();
                 ctx.html("Stopping Reader...");
             });
-
+            
             // debug
             javalinApp.get("/debug", ctx -> {
                 StringBuilder response = new StringBuilder();
                 response.append("<html><head><Title>PikaReader Debug</title></head><body>\n");
-                DebugLogHolder.eventMap.keySet().stream().sorted().forEach( e -> {
+                DebugLogHolder.eventMap.keySet().stream().sorted().forEach(e -> {
                     ILoggingEvent event = DebugLogHolder.eventMap.get(e);
                     response.append(e.toString()).append(": ");
                     response.append(event.getLevel().toString()).append(": ");
                     response.append(event.getLoggerName()).append(": ");
-                    response.append(event.getFormattedMessage());        
+                    response.append(event.getFormattedMessage());
                     response.append("<BR>\n");
                 });
                 response.append("<body><html>\n");
@@ -126,37 +134,77 @@ public class HTTPHandler {
             });
             
             // Trigger
-            javalinApp.get("/trigger", ctx -> {
-
+            javalinApp.put("/trigger", ctx -> {
+                Instant now = Instant.now();
+                TagRead tr = new TagRead();
+                tr.setEPC("0");
+                tr.setEpochMilli(now.getEpochSecond());
+                tr.setTimestamp(LocalDateTime.now(PikaConfig.getInstance().getTimezoneId())); // TODO: fix the ZoneOffset
+                tr.setReaderID(0);
+                tr.setReaderAntenna(0);
+                List<TagRead> trigger = new ArrayList<>();
+                trigger.add(tr);
+                TagReadRouter.getInstance().processTagReads(trigger);
             });
             
-            // Rewind
-            // TODO: Rewind filters
+            // Rewinds the data. from and to are in ISO_LOCAL_DATE_TIME 2011-12-03T10:15:30
+            javalinApp.get("/rewind/{from}/{to}", ctx -> {
+                //ZoneId zoneId = PikaConfig.getInstance().getTimezoneId();
+                
+                LocalDateTime fromTime = LocalDateTime.parse(ctx.pathParam("from"));
+                LocalDateTime toTime = LocalDateTime.parse(ctx.pathParam("to"));
+                
+//                Long from = ctx.pathParamAsClass("from", Long.class).getOrDefault(0L);
+//                Long to = ctx.pathParamAsClass("to", Long.class).getOrDefault(LocalDateTime.now().toEpochSecond(ZoneOffset.UTC)); // TODO: fix the ZoneOffset
+//                LocalDateTime fromTime = LocalDateTime.ofEpochSecond(from, 0, ZoneOffset.UTC); // TODO: fix the ZoneOffset
+//                LocalDateTime toTime = LocalDateTime.ofEpochSecond(to, 0, ZoneOffset.UTC); // TODO: fix the ZoneOffset
+                
+                JSONArray data = new JSONArray();
+                TagDB.getInstance().getReads().stream().sorted().forEach(read -> {
+                    if (fromTime.isBefore(read.getTimestamp()) && toTime.isAfter(read.getTimestamp())) {
+                        data.put(read.toJSONObject());
+                    }
+                });
+                ctx.json(data.toString());
+            });
+            
+            // Rewinds the data. from is in ISO_LOCAL_DATE_TIME: 2011-12-03T10:15:30
+            javalinApp.get("/rewind/{from}", ctx -> {
+                //Long from = ctx.pathParamAsClass("from", Long.class).getOrDefault(0L);
+                //LocalDateTime fromTime = LocalDateTime.ofEpochSecond(from, 0, ZoneOffset.UTC); // TODO: fix the ZoneOffset
+                
+                LocalDateTime fromTime = LocalDateTime.parse(ctx.pathParam("from"));
+                JSONArray data = new JSONArray();
+                TagDB.getInstance().getReads().stream().sorted().forEach(read -> {
+                    
+                    if (fromTime.isBefore(read.getTimestamp())) {
+                        data.put(read.toJSONObject());
+                    }
+                });
+                ctx.json(data.toString());
+            });
+            
             javalinApp.get("/rewind", ctx -> {
                 JSONArray data = new JSONArray();
-                    TagDB.getInstance().getReads().stream().sorted().forEach(read -> {
-                        data.put(read.toJSONObject());
-                    });
-                    ctx.json(data.toString());
+                TagDB.getInstance().getReads().stream().filter(Objects::nonNull).sorted().forEach(read -> {
+                    data.put(read.toJSONObject());
+                });
+                ctx.json(data.toString());
             });
             
-            // Status Page
-
+            // TODO: Status Page
             // TODO: Live Antenna Monitor page
-            
             // TODO: Reader config page
-            
             // TODO: Uploader config page
             
-            // 
+            
             // Start the javalin server
             javalinApp.start(webConfig.optIntegerObject("Port", 8080));
-
         });
 
-        t.setDaemon(true);
-        t.setName("JavalinThread");
-        t.start();
+        javalinThread.setDaemon(true);
+        javalinThread.setName("JavalinThread");
+        javalinThread.start();
 
         logger.trace("Exiting HTTPHandler constructor");
 
@@ -167,15 +215,10 @@ public class HTTPHandler {
     }
 
     public void sendTag(TagRead tr) {
-        JSONObject msg = new JSONObject();
-        msg.put("chip", tr.getEPCDecimal());
-        msg.put("timestamp", tr.getTimestamp().format(formatter));
-        msg.put("reader", tr.getReaderID());
-        msg.put("antenna", tr.getReaderAntenna());
-        msg.put("rssi", tr.getPeakRSSI());
         webSocketConnections.stream().filter(ctx -> ctx.session.isOpen()).forEach(ws -> {
-            ws.send(msg.toString());
+            ws.send(tr.toJSON());
         });
+        
     }
 
     public void sendTags(Collection<TagRead> reads) {

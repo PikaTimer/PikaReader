@@ -25,7 +25,7 @@ import org.json.JSONObject;
  *
  * @author John Garner <segfaultcoredump@gmail.com>
  */
-public class TagRead implements Comparable<TagRead>{
+public class TagRead implements Comparable<TagRead> {
 
     protected String hexEPC;
     //protected String readerIP;
@@ -33,6 +33,8 @@ public class TagRead implements Comparable<TagRead>{
     protected Double rssi;
     protected Integer antennaPortNumber;
     protected Integer readerID;
+    protected Long epochMilli;
+    protected String tzOffset;
 
     private static final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd' 'HH:mm:ss.SSS");
 
@@ -48,12 +50,6 @@ public class TagRead implements Comparable<TagRead>{
         return new BigInteger(hexEPC, 16).toString();
     }
 
-//    public void setReaderIP(String address) {
-//        readerIP = address;
-//    }
-//    public String getReaderIP(){
-//        return readerIP;
-//    }
     public void setTimestamp(LocalDateTime tagTimestamp) {
         timestamp = tagTimestamp;
     }
@@ -89,31 +85,43 @@ public class TagRead implements Comparable<TagRead>{
     public String toJSON() {
         return toJSONObject().toString();
     }
-    
-    public JSONObject toJSONObject(){
-                JSONObject msg = new JSONObject();
+
+    public JSONObject toJSONObject() {
+        JSONObject msg = new JSONObject();
         msg.put("chip", getEPCDecimal());
         msg.put("timestamp", getTimestamp().format(formatter));
-        msg.put("reader", getReaderID());
-        msg.put("antenna", getReaderAntenna());
-        msg.put("rssi", getPeakRSSI());
+        msg.put("reader", readerID);
+        msg.put("antenna", antennaPortNumber);
+        msg.put("rssi", rssi);
+        msg.put("tz", tzOffset);
+        msg.put("epochMilli",epochMilli);
         return msg;
     }
-    
-    public TagRead(){
+
+    public TagRead() {
         // do nothing here
     }
-    
-    public TagRead(JSONObject o){
+
+    public TagRead(JSONObject o) {
         readerID = o.optInt("reader");
         antennaPortNumber = o.getInt("antenna");
         rssi = o.getDouble("rssi");
         timestamp = LocalDateTime.parse(o.getString("timestamp"), formatter);
-        hexEPC = new BigInteger(o.getString("chip"),10).toString(16);
+        hexEPC = new BigInteger(o.getString("chip"), 10).toString(16); 
+        tzOffset = o.optString("tz", "Z");
+        epochMilli = o.optLong("epochMilli");
     }
-    
+
     @Override
-    public int compareTo(TagRead other){
+    public int compareTo(TagRead other) {
         return this.timestamp.compareTo(other.timestamp);
+    }
+
+    public void setEpochMilli(Long epochMilli) {
+        this.epochMilli = epochMilli;
+    }
+
+    public void setTZOffset(String offset) {
+        this.tzOffset = offset;
     }
 }

@@ -61,8 +61,6 @@ public class PikaReader {
         // Read Config
         PikaConfig pikaConfig = PikaConfig.getInstance();
 
-        
-
         // Startup DB;
         TagDB tagDB = TagDB.getInstance();
 
@@ -72,15 +70,15 @@ public class PikaReader {
         // Hard code this until the Web UI and buttons are setup
         readerHandler.setClocks();
         readerHandler.startReading();
+
         // Start http listener
         HTTPHandler httpHandler = HTTPHandler.getInstance();
 
         // TODO: Setup Raspberry PI interfaces
         // Start broadcast listener so others can find us
-        
         DiscoveryListener.startDiscoveryListener();
-        
-        // This is good for 
+
+        // This is good for debugging
         System.out.println("Press Enter to exit.");
         Scanner s = new Scanner(System.in);
         s.nextLine();
@@ -91,12 +89,12 @@ public class PikaReader {
         logger.info("Stopping Jetty");
         httpHandler.stopHTTPD();
 
-        //try {
-        //    Thread.sleep(5000);
-        //} catch (InterruptedException ex) {
-        //}
         //logger.info("Stopping TagDB");
-        //tagDB.stopDB();
+        //tagDB.stopDB(); 
         logger.info("PikaReader Stopped...");
+        
+        // Kills any background web sessions that are still hanging out there
+        System.exit(0);
+        
     }
 }

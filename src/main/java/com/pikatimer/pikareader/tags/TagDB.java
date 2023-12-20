@@ -89,17 +89,6 @@ public class TagDB {
 
         Thread t = new Thread(() -> {
 
-            // Setup the EclipseStore DB and populate the root object
-//            logger.info("Starting EclipseStore with DB path of {}", dbPath.toAbsolutePath());
-//
-//            EmbeddedStorageManager storageManager = EmbeddedStorageConfigurationBuilder.New()
-//                    .setBackupDirectory(dbBackupPath.toString())
-//                    .setStorageDirectory(dbPath.toString())
-//                    .createEmbeddedStorageFoundation()
-//                    .createEmbeddedStorageManager();
-//            storageManager.setRoot(tagDBRoot);
-//            storageDB = storageManager.start();
-            //storageDB = EmbeddedStorage.start(tagDBRoot, storageManager);
             Instant start = Instant.now();
             try (Stream<Path> walk = Files.walk(dbPath)) {
                 walk.parallel().filter(Files::isRegularFile).forEach(f -> {

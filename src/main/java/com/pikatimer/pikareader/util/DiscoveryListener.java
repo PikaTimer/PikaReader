@@ -36,12 +36,11 @@ public class DiscoveryListener {
     public static Thread startDiscoveryListener() {
         // Setup a network discovery listener so others can find us
         // Adapted from https://michieldemey.be/blog/network-discovery-using-udp-broadcast/
-        Thread discoveryThread = new Thread() {
-            @Override
-            public void run() {
+        Thread discoveryThread = new Thread(() -> {
+            
                 try {
 
-                    //Keep a socket open to listen to all the UDP trafic that is destined for this port
+                    //Open a socket to listen to all the UDP trafic that is destined for port 8080
                     DatagramSocket socket = new DatagramSocket(8080, InetAddress.getByName("0.0.0.0"));
                     socket.setBroadcast(true);
                     
@@ -70,9 +69,8 @@ public class DiscoveryListener {
                 } catch (IOException ex) {
                     logger.debug("Exception in DiscoveryListener", ex);
                 }
-            }
-
-        };
+        });
+        
         discoveryThread.setDaemon(true);
         discoveryThread.setName("DiscoveryListenerThread");
         discoveryThread.start();

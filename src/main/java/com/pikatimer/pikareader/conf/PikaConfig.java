@@ -25,8 +25,12 @@ import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.nio.charset.StandardCharsets;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.Enumeration;
 import java.util.HexFormat;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -45,6 +49,8 @@ public class PikaConfig {
 
     private JSONObject configRoot;
     private final File configFile = new File(System.getProperty("CONFIG", System.getProperty("user.home") + "/.PikaReader.cfg"));
+    
+    ZoneId zoneId = ZoneId.systemDefault();
 
     /**
      * SingletonHolder is loaded on the first execution of
@@ -132,10 +138,29 @@ public class PikaConfig {
         
         putValue("UnitIP", IP);
         
-        // Timezone
+        // Timezone Settings
+        
+        // If we don't have a timezone set in the config, create a default value. 
         if (configRoot.optString("Timezone").isBlank()){
             putValue("Timezone", "AUTO");
         }
+        
+        // Now let's translate what the timezone value is into a ZoneID
+        try {
+            Pattern pattern = Pattern.compile("[+-]\\d+");
+            zoneId = switch (getStringValue("Timezone").toUpperCase()) {
+                case "", "AUTO" ->
+                    ZoneId.systemDefault();
+                case String s when pattern.matcher(s).matches() ->
+                    ZoneId.ofOffset("UTC", ZoneOffset.of(getStringValue("Timezone")));
+                default ->
+                    ZoneId.of(getStringValue("Timezone"));
+            };
+        } catch (Exception e) {
+            logger.error("Unable to parse timezone {}, falling back to {}", getStringValue("Timezone"), zoneId.toString());
+        }
+
+        logger.info("PikaReader Timezone: using zoneID " + zoneId.toString() + " Offset: " + ZonedDateTime.now(zoneId).getOffset());
 
         logger.trace("Exiting PikaConfig::loadConfig()");
     }
@@ -182,5 +207,9 @@ public class PikaConfig {
 
     public Integer getIntegerValue(String key) {
         return configRoot.optIntegerObject(key);
+    }
+    
+    public ZoneId getTimezoneId(){
+        return zoneId;
     }
 }

@@ -19,6 +19,7 @@ package com.pikatimer.pikareader.readers.impinj;
 import com.impinj.octane.AntennaConfigGroup;
 import com.impinj.octane.ImpinjReader;
 import com.impinj.octane.OctaneSdkException;
+import com.impinj.octane.RShellConnectionType;
 import com.impinj.octane.ReaderMode;
 import com.impinj.octane.ReportConfig;
 import com.impinj.octane.ReportMode;
@@ -73,11 +74,15 @@ public class Impinj implements RFIDReader {
             /* login can take some time to give username and password */
             
             rshell.openSecureSession(readerIP, "root", "impinj", 10000);
-
+            
+            //rshell.open(readerIP, "root", "impinj", 10000, RShellConnectionType.Telnet);
+            
             String cmd = "config network ntp disable";
             logger.debug("Sending command '" + cmd + "' to " + readerIP);
 
             String reply = rshell.send(cmd);
+            
+            
 
             logger.debug("Raw Reply");
             logger.debug(reply);
