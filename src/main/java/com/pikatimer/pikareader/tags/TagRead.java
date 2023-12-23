@@ -105,7 +105,7 @@ public class TagRead implements Comparable<TagRead> {
     public TagRead(JSONObject o) {
         readerID = o.optInt("reader");
         antennaPortNumber = o.getInt("antenna");
-        rssi = o.getDouble("rssi");
+        rssi = o.optDouble("rssi", 0.0);
         timestamp = LocalDateTime.parse(o.getString("timestamp"), formatter);
         hexEPC = new BigInteger(o.getString("chip"), 10).toString(16); 
         tzOffset = o.optString("tz", "Z");

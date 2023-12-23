@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
  */
 public class TagDB {
 
-    private static final BlockingQueue<Collection<TagRead>> tagQueue = new ArrayBlockingQueue(100);
+    private static final BlockingQueue<Collection<TagRead>> tagQueue = new ArrayBlockingQueue<>(100);
     private static final Logger logger = LoggerFactory.getLogger(TagDB.class);
     private static final PikaConfig pikaConfig = PikaConfig.getInstance();
     private final JSONObject dbConfig;

@@ -68,8 +68,8 @@ public class PikaReader {
         ReaderHandler readerHandler = ReaderHandler.getInstance();
 
         // Hard code this until the Web UI and buttons are setup
-        readerHandler.setClocks();
-        readerHandler.startReading();
+        //readerHandler.setClocks();
+        //readerHandler.startReading();
 
         // Start http listener
         HTTPHandler httpHandler = HTTPHandler.getInstance();

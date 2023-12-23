@@ -14,38 +14,28 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+package com.pikatimer.pikareader.readers.impinj;
 
-package com.pikatimer.pikareader.readers;
-
-import org.json.JSONObject;
+import com.impinj.octane.ImpinjReader;
+import com.impinj.octane.KeepaliveEvent;
+import com.impinj.octane.KeepaliveListener;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author John Garner <segfaultcoredump@gmail.com>
  */
+public class ImpinjKeepaliveTimeoutListener implements KeepaliveListener {
 
-public interface RFIDReader {
-    
-    // set hostname
-    
-    // start reading
-    
-    // stop reading
-    
-    // set clock
-    
-    // Reader Status getStatus()
-    public String getType();
-    public Boolean isReading();
-    public Integer getID();
-    public String getIP();
-    public void setClock();
-    public void startReading();
-    public void stopReading();
-    //public void setPower(String powerLevel);
-    //public void setIP(String readerIP);
-    //public void setID(Integer id);
-    //public RFIDReader getInstance(Integer readerID, String readerIP);
+    private static final Logger logger = LoggerFactory.getLogger(ImpinjKeepaliveTimeoutListener.class);
 
-    public RFIDReader getInstance(JSONObject rc);
+    public ImpinjKeepaliveTimeoutListener() {
+    }
+
+    @Override
+    public void onKeepalive(ImpinjReader reader, KeepaliveEvent ke) {
+        logger.trace("Got a keepalive from {}", reader.getAddress());
+    }
+
 }

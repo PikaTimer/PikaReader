@@ -36,14 +36,14 @@ import org.slf4j.LoggerFactory;
  */
 public class TagReadProcessor implements Runnable {
 
-    private static final BlockingQueue<TagRead> tagQueue = new ArrayBlockingQueue(100000);
+    private static final BlockingQueue<TagRead> tagQueue = new ArrayBlockingQueue<>(100000);
     private static final Logger logger = LoggerFactory.getLogger(TagReadProcessor.class);
     private static final PikaConfig pikaConfig = PikaConfig.getInstance();
     private static final TagReadRouter tagRouter = TagReadRouter.getInstance();
 
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd' 'HH:mm:ss.SSS");
 
-    Map<String, TagRead> seenTags = new HashMap();
+    Map<String, TagRead> seenTags = new HashMap<>();
     Integer defaultGating = 3000;
 
     private Thread tagProcessingThread;
@@ -70,7 +70,7 @@ public class TagReadProcessor implements Runnable {
         try {
             while (true) {
 
-                List<TagRead> tags = new ArrayList();
+                List<TagRead> tags = new ArrayList<>();
 
                 Integer gating = pikaConfig.getKey("Reader").optIntegerObject("Gating") * 1000;
                 if (gating.equals(0)) {
@@ -86,8 +86,8 @@ public class TagReadProcessor implements Runnable {
 
                 logger.debug("Recieved {} raw tag reads to process", tags.size());
 
-                Map<String, TagRead> tagMap = new HashMap(1000);
-                Map<String, Double> antennaStatusMap = new HashMap(32);
+                Map<String, TagRead> tagMap = new HashMap<>(1000);
+                Map<String, Double> antennaStatusMap = new HashMap<>(32);
                                
                 // split the tags into a hash, saving the strongest read
                 tags.forEach(t -> {
