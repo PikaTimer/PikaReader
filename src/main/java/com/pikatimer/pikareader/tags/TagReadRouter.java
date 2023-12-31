@@ -93,7 +93,7 @@ public class TagReadRouter implements Runnable {
 
         }
 
-        logger.info("TagRouter::processTagReads: Recieved {} new tags to process.", tr.size());
+        logger.debug("TagRouter::processTagReads: Recieved {} new tags to process.", tr.size());
         tagQueue.add(tr);
 
         logger.trace("Exiting TagReadRouter::processTagReads");

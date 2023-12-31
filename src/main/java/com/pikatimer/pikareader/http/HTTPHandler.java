@@ -19,25 +19,23 @@ package com.pikatimer.pikareader.http;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import com.pikatimer.pikareader.conf.PikaConfig;
 import com.pikatimer.pikareader.readers.ReaderHandler;
+import com.pikatimer.pikareader.status.Status;
+import com.pikatimer.pikareader.status.StatusHandler;
 import com.pikatimer.pikareader.tags.TagDB;
 import com.pikatimer.pikareader.tags.TagRead;
 import com.pikatimer.pikareader.tags.TagReadRouter;
 import com.pikatimer.pikareader.util.DebugLogHolder;
 import io.javalin.Javalin;
 import io.javalin.http.staticfiles.Location;
-import io.javalin.websocket.WsCloseStatus;
 import io.javalin.websocket.WsContext;
 import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
-import java.util.logging.Level;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -106,16 +104,22 @@ public class HTTPHandler {
 
             // Stop Readers
             javalinApp.get("/start", ctx -> {
-                logger.info("Starting Readers...");
+                logger.info("HTTPD Request: /start -> Starting Readers...");
                 readerHandler.startReading();
-                ctx.html("Starting Reader...");
+                JSONObject response = new JSONObject();
+                response.put("readers", "started");
+                response.put("timestamp", LocalDateTime.now(PikaConfig.getInstance().getTimezoneId()).format(formatter));
+                ctx.json(response.toString());
             });
 
             // Start Readers
             javalinApp.get("/stop", ctx -> {
-                logger.info("Stopping Readers...");
+                logger.info("HTTPD Request: /stop -> Stopping Readers...");
                 readerHandler.stopReading();
-                ctx.html("Stopping Reader...");
+                JSONObject response = new JSONObject();
+                response.put("readers", "stopped");
+                response.put("timestamp", LocalDateTime.now(PikaConfig.getInstance().getTimezoneId()).format(formatter));
+                ctx.json(response.toString());
             });
 
             // debug info
@@ -187,13 +191,18 @@ public class HTTPHandler {
                 });
                 ctx.json(data.toString());
             });
-
+            
+            
             // TODO: Status Page
+            javalinApp.get("/status", ctx -> {
+                ctx.json(StatusHandler.getInstance().getStatus().toString(4));
+            });
             // TODO: Live Antenna Monitor page
             // TODO: Reader config page
             // TODO: Uploader config page
             // Start the javalin server
             javalinApp.start(webConfig.optIntegerObject("Port", 8080));
+            
         });
 
         javalinThread.setDaemon(true);
@@ -210,14 +219,26 @@ public class HTTPHandler {
 
     public void sendTag(TagRead tr) {
         webSocketConnections.stream().filter(ctx -> ctx.session.isOpen()).forEach(ws -> {
-            ws.send(tr.toJSON());
+            JSONObject read = tr.toJSONObject();
+            read.put("type", "READ");
+            ws.send(read.toString());
         });
-
     }
 
     public void sendTags(Collection<TagRead> reads) {
         reads.forEach(tr -> {
             sendTag(tr);
+        });
+    }
+
+    public void sendTag(Status s) {
+        
+    }
+    
+    public void postStatus(JSONObject statusReport) {
+        statusReport.put("type", "STATUS");
+        webSocketConnections.stream().filter(ctx -> ctx.session.isOpen()).forEach(ws -> {
+            ws.send(statusReport.toString());
         });
     }
 

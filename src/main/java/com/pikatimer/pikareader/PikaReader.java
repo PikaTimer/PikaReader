@@ -19,6 +19,7 @@ package com.pikatimer.pikareader;
 import com.pikatimer.pikareader.conf.PikaConfig;
 import com.pikatimer.pikareader.http.HTTPHandler;
 import com.pikatimer.pikareader.readers.ReaderHandler;
+import com.pikatimer.pikareader.status.StatusHandler;
 import com.pikatimer.pikareader.tags.TagDB;
 import com.pikatimer.pikareader.util.DiscoveryListener;
 import java.util.Scanner;
@@ -77,6 +78,9 @@ public class PikaReader {
         // TODO: Setup Raspberry PI interfaces
         // Start broadcast listener so others can find us
         DiscoveryListener.startDiscoveryListener();
+        
+        // start the status handler
+        StatusHandler statusHandler = StatusHandler.getInstance();
 
         // This is good for debugging
         System.out.println("Press Enter to exit.");
@@ -90,7 +94,6 @@ public class PikaReader {
         httpHandler.stopHTTPD();
 
         //logger.info("Stopping TagDB");
-        //tagDB.stopDB(); 
         logger.info("PikaReader Stopped...");
         
         // Kills any background web sessions that are still hanging out there

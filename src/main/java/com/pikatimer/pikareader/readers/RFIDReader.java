@@ -17,6 +17,7 @@
 
 package com.pikatimer.pikareader.readers;
 
+import java.util.Map;
 import org.json.JSONObject;
 
 /**
@@ -25,14 +26,6 @@ import org.json.JSONObject;
  */
 
 public interface RFIDReader {
-    
-    // set hostname
-    
-    // start reading
-    
-    // stop reading
-    
-    // set clock
     
     // Reader Status getStatus()
     public String getType();
@@ -43,9 +36,9 @@ public interface RFIDReader {
     public void startReading();
     public void stopReading();
     //public void setPower(String powerLevel);
-    //public void setIP(String readerIP);
-    //public void setID(Integer id);
-    //public RFIDReader getInstance(Integer readerID, String readerIP);
+    
 
-    public RFIDReader getInstance(JSONObject rc);
+    public RFIDReader create(JSONObject rc);
+    
+    public Map<Integer,String> getAntennaStatus();
 }

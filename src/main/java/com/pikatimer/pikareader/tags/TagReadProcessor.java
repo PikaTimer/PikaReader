@@ -18,6 +18,7 @@ package com.pikatimer.pikareader.tags;
 
 import com.pikatimer.pikareader.conf.PikaConfig;
 import com.pikatimer.pikareader.readers.ReaderGatingStyle;
+import com.pikatimer.pikareader.status.StatusHandler;
 import java.awt.Toolkit;
 import java.time.Duration;
 import java.time.format.DateTimeFormatter;
@@ -40,6 +41,7 @@ public class TagReadProcessor implements Runnable {
     private static final Logger logger = LoggerFactory.getLogger(TagReadProcessor.class);
     private static final PikaConfig pikaConfig = PikaConfig.getInstance();
     private static final TagReadRouter tagRouter = TagReadRouter.getInstance();
+    private static final StatusHandler statusHandler = StatusHandler.getInstance();
 
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd' 'HH:mm:ss.SSS");
 
@@ -111,15 +113,7 @@ public class TagReadProcessor implements Runnable {
                         tagMap.put(key, t);
                     }
 
-                    // Track the strongest read on a given antenna
-                    String antennaID = t.readerID + ":" + t.antennaPortNumber;
-                    if (antennaStatusMap.containsKey(antennaID)) {
-                        if (antennaStatusMap.get(antennaID).compareTo(t.rssi) < 0) {
-                            antennaStatusMap.put(antennaID, t.rssi);
-                        }
-                    } else {
-                        antennaStatusMap.put(antennaID, t.rssi);
-                    }
+                    
 
                 });
 
@@ -150,7 +144,6 @@ public class TagReadProcessor implements Runnable {
         // Start the tag processing thread
         if (tagProcessingThread == null) {
 
-            //tagProcessingThread = Thread.ofVirtual().name("TagReadProcessingThread").start(this);
             tagProcessingThread = new Thread(TagReadProcessor.getInstance());
             tagProcessingThread.setName("TagProcessingThread");
             tagProcessingThread.setDaemon(true);
@@ -163,6 +156,9 @@ public class TagReadProcessor implements Runnable {
         logger.trace("TagRead: " + tr.getEPCDecimal() + " Timestamp:" + tr.getTimestamp().format(formatter) + " RSSI: " + tr.rssi);
         tagQueue.add(tr);
 
+        
+        statusHandler.postRead(tr);
+        
         // Beep if we have not seen the tag before or have not seen it in the last 5 seconds. 
         // TODO:  Replace the AWT Toolkit beep with something better
         if (seenTags.containsKey(tr.hexEPC)) {

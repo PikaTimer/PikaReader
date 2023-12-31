@@ -14,26 +14,18 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.pikatimer.pikareader.readers.impinj;
+package com.pikatimer.pikareader.status;
 
-import com.impinj.octane.AntennaChangeListener;
-import com.impinj.octane.AntennaEvent;
-import com.impinj.octane.ImpinjReader;
+import org.json.JSONObject;
 
 /**
  *
  * @author John Garner <segfaultcoredump@gmail.com>
  */
-public class ImpinjAntennaChangeListener implements AntennaChangeListener {
-    Impinj reader = null;
-    @Override
-    public void onAntennaChanged(ImpinjReader r, AntennaEvent e) {
-        System.out.println("Antenna Change--port: " + e.getPortNumber()
-                + " state: " + e.getState().toString());
-        reader.getAntennaStatus().put((int) e.getPortNumber(), e.getState().toString().replace("Antenna", ""));
+public class Status {
+
+    public JSONObject toJSONObject() {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
     }
     
-    ImpinjAntennaChangeListener(Impinj reader){
-        this.reader = reader;
-    }
 }

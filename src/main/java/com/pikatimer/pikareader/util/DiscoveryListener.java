@@ -41,14 +41,17 @@ public class DiscoveryListener {
                 try {
 
                     //Open a socket to listen to all the UDP trafic that is destined for port 8080
-                    DatagramSocket socket = new DatagramSocket(8080, InetAddress.getByName("0.0.0.0"));
+                    DatagramSocket socket = new DatagramSocket(8888, InetAddress.getByName("0.0.0.0"));
                     socket.setBroadcast(true);
                     
                     // get the port that the web app is listening on
                     String webPort = pikaConfig.getKey("Web").optIntegerObject("Port", 8080).toString();
-
+                    String unitId = pikaConfig.getStringValue("UnitID");
+                    
+                    logger.info("Network Discovery Listener: Ready to receive broadcast packets");
+                    
                     while (true) {
-                        logger.info("Network Discovery Listener: Ready to receive broadcast packets");
+                        
                         //Receive a packet
                         byte[] recvBuf = new byte[15000];
                         DatagramPacket packet = new DatagramPacket(recvBuf, recvBuf.length);
@@ -60,7 +63,8 @@ public class DiscoveryListener {
 
                         //See if the packet holds the right command (message)
                         if (message.equals("DISCOVER_PIKA_READER_REQUEST")) {
-                            byte[] sendData = webPort.getBytes();
+                            String response = "PIKA_READER " + unitId + " " + webPort;
+                            byte[] sendData = response.getBytes();
                             DatagramPacket sendPacket = new DatagramPacket(sendData, sendData.length, packet.getAddress(), packet.getPort());
                             socket.send(sendPacket);
                             logger.debug("Replied to: " + sendPacket.getAddress().getHostAddress());

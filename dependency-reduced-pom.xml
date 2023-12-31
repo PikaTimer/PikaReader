@@ -43,6 +43,10 @@
             <goals>
               <goal>shade</goal>
             </goals>
+            <configuration>
+              <shadedArtifactAttached>true</shadedArtifactAttached>
+              <shadedClassifierName>uberJar</shadedClassifierName>
+            </configuration>
           </execution>
         </executions>
       </plugin>
