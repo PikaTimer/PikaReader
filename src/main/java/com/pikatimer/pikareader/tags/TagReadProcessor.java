@@ -119,18 +119,14 @@ public class TagReadProcessor implements Runnable {
 
                 // For each read, post it to the handler
                 tagRouter.processTagReads(tagMap.values()); 
-                
-                // Generate the antennaStatus Map
 
-                if (logger.isDebugEnabled()) {
-                    tagMap.keySet().stream().sorted().forEach(e -> {
-                        TagRead t = tagMap.get(e);
-                        logger.debug("Strongest Read: " + t.getEPCDecimal() + " Timestamp: " + t.timestamp.format(formatter)
-                                + " RSSI: " + t.rssi + " ReaderID " + t.getReaderID() + " Antenna: " + t.getReaderAntenna());
-                    });
-                }
-                
-                // TODO: send the antenna Status to the reader handler
+                // Update some stats
+                String lastChipRead = tagMap.values().stream()
+                        .sorted((t1, t2) -> t1.epochMilli.compareTo(t2.epochMilli))
+                        .skip(tagMap.size() - 1).findFirst().get().getEPCDecimal();
+                StatusHandler statusHandler = StatusHandler.getInstance();
+                statusHandler.incrementReadCount(tagMap.size());
+                statusHandler.lastChipRead(lastChipRead);
 
             }
         } catch (InterruptedException ex) {

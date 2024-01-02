@@ -17,6 +17,7 @@
 package com.pikatimer.pikareader.readers;
 
 import com.pikatimer.pikareader.conf.PikaConfig;
+import com.pikatimer.pikareader.status.StatusHandler;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -35,6 +36,7 @@ import org.slf4j.LoggerFactory;
 public class ReaderHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(ReaderHandler.class);
+
     private static final PikaConfig pikaConfig = PikaConfig.getInstance();
     private static final Map<Integer, RFIDReader> readers = new HashMap<>();
     private static final Map<String, RFIDReader> rfidReaderFactory = new HashMap<>();
@@ -96,11 +98,14 @@ public class ReaderHandler {
         readerConfig.getJSONArray("Readers").forEach(r -> {
             JSONObject rc = (JSONObject) r; // FFS
             Integer index = rc.optInt("Index", 0);
-            String type = rc.optString("Type", "IMPINJ");
+            String type = rc.optString("Type", "NOT SET");
 
-            RFIDReader reader = rfidReaderFactory.get(type).create(rc);
-
-            readers.put(index, reader);
+            if (rfidReaderFactory.containsKey(type)) {
+                RFIDReader reader = rfidReaderFactory.get(type).create(rc);
+                readers.put(index, reader);
+            } else {
+                logger.error("RFID Reader Config Error! No handler found for RFID Reader type {}" , type);
+            }
         });
 
     }
@@ -127,10 +132,12 @@ public class ReaderHandler {
         });
         try {
             latch.await(30, TimeUnit.SECONDS);
-            
+
         } catch (InterruptedException ex) {
         }
         isReading = true;
+        StatusHandler.getInstance().clearReadCount();
+
         logger.info("Readers Started");
 
     }

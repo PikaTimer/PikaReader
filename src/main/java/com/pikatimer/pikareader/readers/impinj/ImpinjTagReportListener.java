@@ -60,6 +60,8 @@ public class ImpinjTagReportListener implements TagReportListener {
             TagRead tr = new TagRead();
 
             tr.setReaderID(readerID);
+            
+            logger.trace("Tag Read: {} at {}",  t.getEpc().toHexString(), t.getLastSeenTime().getLocalDateTime().toInstant().toString());
 
             /*
             System.out.print(" EPC: " + t.getEpc().toHexString());

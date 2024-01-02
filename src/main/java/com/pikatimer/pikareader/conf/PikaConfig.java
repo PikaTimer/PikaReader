@@ -43,7 +43,7 @@ import org.slf4j.LoggerFactory;
  */
 public class PikaConfig {
 
-    private static final String VERSION = "0.5";
+    private static final String VERSION = "0.6";
 
     private static final Logger logger = LoggerFactory.getLogger(PikaConfig.class);
 
@@ -68,11 +68,11 @@ public class PikaConfig {
         return SingletonHolder.INSTANCE;
     }
 
-    private PikaConfig() {
+    private  PikaConfig() {
         loadConfig();
     }
 
-    private void loadConfig() {
+    private synchronized void loadConfig() {
         logger.trace("Starting PikaConfig::loadConfig()");
         JSONObject root= new JSONObject();
         try {

@@ -47,8 +47,8 @@ public class Impinj implements RFIDReader {
     private static final Logger logger = LoggerFactory.getLogger(Impinj.class);
     private final ImpinjReader reader;
     private ImpinjPowerLevels powerLevel = ImpinjPowerLevels.HIGH; // 30.0dBm / 1.0W. A go-to value for most stuff. 
-    
-    private Map<Integer,String> antennaStatus = new HashMap<>();
+
+    private Map<Integer, String> antennaStatus = new HashMap<>();
 
     private JSONObject readerConfig = new JSONObject();
 
@@ -59,7 +59,7 @@ public class Impinj implements RFIDReader {
     public Impinj() {
         readerID = -1;
         readerIP = "";
-        
+
         try {
             Class.forName("com.impinj.octane.ImpinjReader");
         } catch (ClassNotFoundException ex) {
@@ -132,11 +132,115 @@ public class Impinj implements RFIDReader {
 
     }
 
+    private Boolean connect() {
+        try {
+
+            //reader = new ImpinjReader();
+            if (!reader.isConnected()) {
+                logger.info("Connecting to {}", readerIP);
+                reader.connect(readerIP);
+
+                // Make sure the reader's time is correct
+                logger.info("Setting the clock...");
+                setClock();
+                logger.info("Clock set");
+
+                reader.setReaderStartListener(new ImpinjReaderStartStopListener(this));
+                reader.setReaderStopListener(new ImpinjReaderStartStopListener(this));
+
+                Settings settings = reader.queryDefaultSettings();
+
+                ReportConfig report = settings.getReport();
+                report.setIncludeAntennaPortNumber(true);
+                report.setMode(ReportMode.Individual);
+                report.setIncludePeakRssi(Boolean.TRUE);
+                //report.setIncludePhaseAngle(Boolean.TRUE);
+                //report.setIncludeFirstSeenTime(Boolean.TRUE);
+                report.setIncludeLastSeenTime(Boolean.TRUE);
+                //settings.setReport(report);
+
+                // Let the reader monitor the environment and adapt as needed
+                settings.setReaderMode(ReaderMode.AutoSetDenseReader);
+                //
+                //settings.setReaderMode(ReaderMode.MaxThroughput);
+
+                settings.setSearchMode(SearchMode.DualTargetBtoASelect);
+                //settings.setSession(1);
+                settings.setTagPopulationEstimate(256);
+
+                // Enable keepalivbes
+                settings.getKeepalives().setEnabled(true);
+                settings.getKeepalives().setPeriodInMs(3000);
+                reader.setKeepaliveListener(new ImpinjKeepaliveTimeoutListener());
+
+                //TODO:  More testing and incorporating the exampels
+                // show in the SDK samples DisconnectedOperation.java file
+                // Enable Connection Monitoring
+                settings.getKeepalives().setEnableLinkMonitorMode(true);
+                settings.getKeepalives().setLinkDownThreshold(5);
+                // set up a listener for connection Lost
+                reader.setConnectionLostListener(new ImpinjConnectionLostListener());
+
+                // Antenna Settings
+                // Antennas are numbered from 1 -> 4
+                AntennaConfigGroup antennas = settings.getAntennas();
+                //antennas.enableById(new short[]{1});
+                //antennas.enablePolarizedAntennas();
+
+                // TODO: Enable / Disable the antennas in the config
+                antennas.enableAll();
+
+                // Set the power levels and sensitivity
+                powerLevel = ImpinjPowerLevels.getLevel(readerConfig.optString("Power Level"));
+                logger.info("Setting power level for reader {} to {}", readerID, powerLevel.getLevel());
+                antennas.setIsMaxRxSensitivity(true);
+                antennas.setTxPowerinDbm(powerLevel.getDBm());
+
+                // TODO: Per-Antenna power levels
+                //antennas.getAntenna((short) 1).setIsMaxRxSensitivity(true);
+                //antennas.getAntenna((short) 1).setIsMaxTxPower(true);
+                //antennas.getAntenna((short) 1).setTxPowerinDbm(32.0);
+                //antennas.getAntenna((short) 1).setRxSensitivityinDbm(-70);
+                // TODO: Pull this from the config
+                antennas.getAntenna((short) 2).setEnabled(false);
+
+                reader.setTagReportListener(new ImpinjTagReportListener(readerID));
+                reader.setAntennaChangeListener(new ImpinjAntennaChangeListener(this));
+
+                reader.queryStatus().getAntennaStatusGroup().getAntennaList().forEach(a -> {
+                    try {
+                        Boolean enabled = antennas.getAntenna(a.getPortNumber()).isEnabled();
+                        logger.info(" Antenna Status: Reader: {} Port: {} Enabled: {} Connected: {} ", readerID, a.getPortNumber(), enabled, a.isConnected());
+                        String s = enabled ? a.isConnected() ? "Connected" : "Disconnected" : "Disabled";
+                        Integer port = (int) a.getPortNumber();
+                        antennaStatus.put(port, s);
+                    } catch (Exception e) {
+                        logger.warn("Er, it did not like port {}", a.getPortNumber());
+                    }
+                });
+
+                logger.debug("Applying Settings");
+                reader.applySettings(settings);
+                
+
+            }
+
+        } catch (OctaneSdkException ex) {
+            logger.error("OctaneSdkExcepton", ex);
+        } catch (Exception ex) {
+            System.out.println(ex.getMessage());
+            logger.error("OctaneSdkExcepton", ex);
+        }
+        
+        return (reader != null && reader.isConnected()) ;
+
+    }
+
     @Override
     public void startReading() {
 
         logger.trace("Entering Impinj::startReading()");
-        
+
         logger.info("Starting the reader with the following config: " + readerConfig.toString(4));
 
         if (reading) {
@@ -146,98 +250,18 @@ public class Impinj implements RFIDReader {
         try {
 
             //reader = new ImpinjReader();
-            if (!reader.isConnected()) {
-                logger.debug("Connecting to {}", readerIP);
-                reader.connect(readerIP);
+            if (connect()) {
+
+                // Make sure the reader's time is correct
+                logger.info("Setting the clock...");
+                setClock();
+                logger.info("Clock set");
+
+                logger.info("Starting reader {}", reader.getAddress());
+                reader.start();
+                reading = true;
 
             }
-
-            // Make sure the reader's time is correct
-            logger.info("Setting the clock...");
-            setClock();
-            logger.info("Clock set");
-
-            reader.setReaderStartListener(new ImpinjReaderStartStopListener(this));
-            reader.setReaderStopListener(new ImpinjReaderStartStopListener(this));
-
-            Settings settings = reader.queryDefaultSettings();
-
-            ReportConfig report = settings.getReport();
-            report.setIncludeAntennaPortNumber(true);
-            report.setMode(ReportMode.Individual);
-            report.setIncludePeakRssi(Boolean.TRUE);
-            //report.setIncludePhaseAngle(Boolean.TRUE);
-            //report.setIncludeFirstSeenTime(Boolean.TRUE);
-            report.setIncludeLastSeenTime(Boolean.TRUE);
-            //settings.setReport(report);
-
-            // Let the reader monitor the environment and adapt as needed
-            settings.setReaderMode(ReaderMode.AutoSetDenseReader);
-            //
-            //settings.setReaderMode(ReaderMode.MaxThroughput);
-
-            settings.setSearchMode(SearchMode.DualTargetBtoASelect);
-            //settings.setSession(1);
-            settings.setTagPopulationEstimate(256);
-
-            // Enable keepalivbes
-            settings.getKeepalives().setEnabled(true);
-            settings.getKeepalives().setPeriodInMs(3000);
-            reader.setKeepaliveListener(new ImpinjKeepaliveTimeoutListener());
-
-            //TODO:  More testing and incorporating the exampels
-            // show in the SDK samples DisconnectedOperation.java file
-            // Enable Connection Monitoring
-            settings.getKeepalives().setEnableLinkMonitorMode(true);
-            settings.getKeepalives().setLinkDownThreshold(5);
-            // set up a listener for connection Lost
-            reader.setConnectionLostListener(new ImpinjConnectionLostListener());
-
-            // Antenna Settings
-            // Antennas are numbered from 1 -> 4
-            AntennaConfigGroup antennas = settings.getAntennas();
-            //antennas.enableById(new short[]{1});
-            //antennas.enablePolarizedAntennas();
-
-            // TODO: Enable / Disable the antennas in the config
-            antennas.enableAll();
-
-            // Set the power levels and sensitivity
-            powerLevel = ImpinjPowerLevels.getLevel(readerConfig.optString("Power Level"));
-            logger.info("Setting power level for reader {} to {}",readerID, powerLevel.getLevel());
-            antennas.setIsMaxRxSensitivity(true);
-            antennas.setTxPowerinDbm(powerLevel.getDBm());
-
-            // TODO: Per-Antenna power levels
-            //antennas.getAntenna((short) 1).setIsMaxRxSensitivity(true);
-            //antennas.getAntenna((short) 1).setIsMaxTxPower(true);
-            //antennas.getAntenna((short) 1).setTxPowerinDbm(32.0);
-            //antennas.getAntenna((short) 1).setRxSensitivityinDbm(-70);
-            
-            // TODO: Pull this from the config
-            antennas.getAntenna((short) 2).setEnabled(false);
-            
-            reader.setTagReportListener(new ImpinjTagReportListener(readerID));
-            reader.setAntennaChangeListener(new ImpinjAntennaChangeListener(this));
-
-            reader.queryStatus().getAntennaStatusGroup().getAntennaList().forEach(a -> {
-                try {
-                Boolean enabled = antennas.getAntenna(a.getPortNumber()).isEnabled();
-                logger.info(" Antenna Status: Reader: {} Port: {} Enabled: {} Connected: {} ", readerID, a.getPortNumber(), enabled, a.isConnected());
-                String s = enabled?a.isConnected()?"Connected":"Disconnected":"Disabled";
-                Integer port = (int) a.getPortNumber();
-                antennaStatus.put(port, s);
-                } catch (Exception e){
-                    logger.warn("Er, it did not like port {}", a.getPortNumber());
-                }
-            });
-
-            logger.debug("Applying Settings");
-            reader.applySettings(settings);
-
-            logger.info("Starting reader {}", reader.getAddress());
-            reader.start();
-            reading = true;
 
         } catch (OctaneSdkException ex) {
             logger.error("OctaneSdkExcepton", ex);
@@ -281,20 +305,21 @@ public class Impinj implements RFIDReader {
         newReader.readerID = config.optInt("Index", 0);
         newReader.readerIP = config.optString("IP", "127.0.0.1");
         newReader.readerConfig = config;
-        
-        logger.info("Created new IMPINJ Reader with the following config: {}", readerConfig.toString(4));
 
+        logger.info("Created new IMPINJ Reader with the following config: {}", config.toString(4));
+
+        newReader.connect();
         return newReader;
     }
 
     void setReading(boolean b) {
         reading = b;
     }
-    
+
     @Override
-    public Map<Integer,String> getAntennaStatus(){
+    public Map<Integer, String> getAntennaStatus() {
         return antennaStatus;
-        
+
     }
 
 }

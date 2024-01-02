@@ -58,7 +58,7 @@ public class HTTPHandler {
     private Javalin javalinApp;
     private static final List<WsContext> webSocketConnections = new ArrayList<>();
 
-    ReaderHandler readerHandler = ReaderHandler.getInstance();
+//    ReaderHandler readerHandler = ReaderHandler.getInstance();
 
     private static class SingletonHolder {
 
@@ -105,7 +105,7 @@ public class HTTPHandler {
             // Stop Readers
             javalinApp.get("/start", ctx -> {
                 logger.info("HTTPD Request: /start -> Starting Readers...");
-                readerHandler.startReading();
+                ReaderHandler.getInstance().startReading();
                 JSONObject response = new JSONObject();
                 response.put("readers", "started");
                 response.put("timestamp", LocalDateTime.now(PikaConfig.getInstance().getTimezoneId()).format(formatter));
@@ -115,7 +115,7 @@ public class HTTPHandler {
             // Start Readers
             javalinApp.get("/stop", ctx -> {
                 logger.info("HTTPD Request: /stop -> Stopping Readers...");
-                readerHandler.stopReading();
+                ReaderHandler.getInstance().stopReading();
                 JSONObject response = new JSONObject();
                 response.put("readers", "stopped");
                 response.put("timestamp", LocalDateTime.now(PikaConfig.getInstance().getTimezoneId()).format(formatter));
