@@ -76,7 +76,7 @@ public class StatusHandler {
         logger.debug("StatusHandler Init starting");
 
         Runnable statusUpdate = () -> {
-            
+
             ReaderHandler readerHandler = ReaderHandler.getInstance();
 
             logger.trace("statusUpdate fired");
@@ -86,10 +86,12 @@ public class StatusHandler {
             statusReport.put("reading", readerHandler.isReading());
             statusReport.put("totalReads", totalReads);
             statusReport.put("lastChipRead", lastChipRead);
+            statusReport.put("unitID", pikaConfig.getStringValue("UnitID"));
 
             logger.trace("Getting readers");
 
             Collection<RFIDReader> readers = readerHandler.getReaders();
+            Map<String,RFIDReader> readerMap = new HashMap<>();
 
             // Track the strongest read on a given antenna
             Map<String, Map<Integer, Double>> antennaReadStrengthMap = new HashMap<>(32);
@@ -100,13 +102,21 @@ public class StatusHandler {
                 reader.put("id", r.getID());
                 reader.put("name", "Reader " + r.getID());
                 reader.put("reading", r.isReading());
-                reader.put("antennas", r.getAntennaStatus());
+                reader.put("portStatus", r.getAntennaStatus());
                 reader.put("type", r.getType());
+                reader.put("connected", r.isConnected());
                 readerStatus.put(reader);
+                
+                readerMap.put("Reader " + r.getID(), r);
+
+
 
                 Map<Integer, Double> s = new HashMap<>(4);
-                r.getAntennaStatus().keySet().forEach(v -> s.put(v, -100.0));
+                r.getAntennaStatus().keySet().stream().sorted().forEach(v -> {
+                    s.put(v, -100.0);
+                });
                 antennaReadStrengthMap.put(r.getID().toString(), s);
+
 
             });
             statusReport.put("readers", readerStatus);
@@ -141,16 +151,25 @@ public class StatusHandler {
                 }
             });
 
-            JSONObject antennaStats = new JSONObject();
+            JSONObject readerPortStats = new JSONObject();
             antennaReadStrengthMap.keySet().forEach(a -> {
-                JSONArray readerStats = new JSONArray();
+                JSONArray readStats = new JSONArray();
+                JSONArray portLabels = new JSONArray();
+                JSONArray portStatus = new JSONArray();
+                JSONObject stats = new JSONObject();
+                
                 antennaReadStrengthMap.get(a).keySet().stream().sorted().forEach(k -> {
-                    readerStats.put(antennaReadStrengthMap.get(a).get(k));
+                    portStatus.put(readerMap.get("Reader " + a).getAntennaStatus().get(k));
+                    readStats.put(antennaReadStrengthMap.get(a).get(k));
+                    portLabels.put("Port " + k);
                 });
-                antennaStats.put("Reader " + a, readerStats);
+                stats.put("labels", portLabels);
+                stats.put("status", portStatus);
+                stats.put("readStrength", readStats);
+                readerPortStats.put("Reader " + a, stats);
             });
 
-            statusReport.put("readStrength", antennaStats);
+            statusReport.put("readerPortStats", readerPortStats);
 
             //statusReport.put("antenna read strength", antennaReadStrengthMap);
             // TODO: Raspberry Pi Stats: 
@@ -160,7 +179,7 @@ public class StatusHandler {
             Instant now = Instant.now();
 
             statusReport.put("timestamp", now.toString());
-            statusReport.put("local Time", LocalDateTime.ofInstant(now, pikaConfig.getTimezoneId()).toString());
+            statusReport.put("localTime", LocalDateTime.ofInstant(now, pikaConfig.getTimezoneId()).toString());
             statusReport.put("timezone", pikaConfig.getTimezoneId().toString());
             lastStatus = statusReport;
             httpHandler.postStatus(statusReport);

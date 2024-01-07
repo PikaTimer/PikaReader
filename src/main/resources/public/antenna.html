@@ -18,79 +18,141 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <script src="/js/chart-4.4.1.js"></script>
+        <title>PikaReader</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" >
+
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css">
+        <style>
+            .form-control-sm {
+                font-size: 1.25rem
+            }
+        </style>
     </head>
+
     <body>
-        <div class="chart-container" style="position: relative; height:40vh; width:100vw">
-            <canvas id="reader1"></canvas>
+        <!-- Bootstrap Bundle with Popper -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" ></script>
+        <div  id="mainMenu"></div>
+        <div class="container">
+
+            <div class="row justify-content-md-center">
+                <div class="col-md-8 text-center">
+                    <h1 class="display-3">Antenna Stats</h1>
+                </div>
+            </div>
+            <div class="row justify-content-md-center">
+                <div class="col-md-8 text-center">
+                            <div id="charts" ></div>
+                </div>
+            </div>
         </div>
-        <div class="chart-container" style="position: relative; height:40vh; width:100vw">
-            <canvas id="reader2"></canvas>
+
+
+
+
+        <div class="fixed-bottom ">
+            <div class="container">
+                <div class="row justify-content-md-center p-3">
+                    <div class="col-md-8 text-center">
+                        <a href="/" class="btn btn-primary btn-lg p-2" role="button">Home</a>
+                        <div><hr></div>
+                        <div class="display-6 p-1 text-center" id="connectionStatus"></div>
+                    </div>
+                </div>
+
+            </div>
         </div>
-        <div class="chart-container" style="position: relative; height:40vh; width:100vw">
-            <canvas id="reader3"></canvas>
-        </div>
+        <script src="/js/chart-4.4.1.js"></script>
         <script>
-            var chartData = [0, 0, 0, 0];
-            const ctx = document.getElementById("reader1");
-            const myChart = new Chart(ctx, {
-                type: "bar",
-                data: {
-                    labels: ["Port 1", "Port 2", "Port 3", "Port 4"],
-                    datasets: [
-                        {
-                            label: "Reader 1",
-                            data: chartData,
-                            backgroundColor: [
-                                "rgba(214, 43, 43, 0.8)",
-                                "rgba(214, 43, 43, 0.8)",
-                                "rgba(214, 43, 43, 0.8)",
-                                "rgba(214, 43, 43, 0.8)"
-                            ],
-                            borderColor: [
-                                "rgba(10,10,10, 1)",
-                                "rgba(10,10,10, 1)",
-                                "rgba(10,10,10, 1)",
-                                "rgba(10,10,10, 1)"
-                            ],
-                            borderWidth: 1,
-                            base: -100
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    scales: {
-                        y: {
-                            //beginAtZero: true,
-                            //reverse: true,
-                            min: -90,
-                            max: -30,
-                            title: {
-                                display: true,
-                                text: 'RSSI dBm'
-                            }
-                        }
-                    }
-                }
-            });
-            
             var eventSocket = "ws://" + window.location.host + "/events";
             console.log("Server Host" + window.location.host);
 
+            var connectionStatus = document.getElementById("connectionStatus");
+
+            const readerMap = new Map();
+            const rootChartDiv = document.getElementById("charts");
             webSocket = new WebSocket(eventSocket);
+            
+            webSocket.onclose = function () {
+                connectionStatus.innerHTML = "Disconnected";
+                // TODO: popup a modal dialog
+            };
+            
             webSocket.onmessage = function (message) {
                 const data = message.data;
                 const status = JSON.parse(data);
 
-
                 if (status.type === "STATUS") {
-                    console.log("Status Message");
-                    chartData = status["readStrength"]["Reader 1"];
-                    myChart.data.datasets[0].data = chartData;
-                    myChart.update();
-                }
+                    //console.log("Status Message");
+                    var readerPortStats = status.readerPortStats;
 
+                    const readers = Object.keys(status.readerPortStats);
+
+                    readers.forEach(reader => {
+                        var s = readerPortStats[reader];
+                        //console.log("Reader: " + reader);
+
+                        // do we already have the reader chart setup?
+                        // If not, create a new chart
+                        if (!readerMap.has(reader)) {
+                            rootChartDiv.insertAdjacentHTML('beforeend', '<div><canvas id="' + reader + '"></canvas></div>');
+
+                            console.log("rootChartDiv: " + rootChartDiv.innerHTML);
+                            const ctx = document.getElementById(reader);
+                            const readerChart = new Chart(ctx, {
+                                type: "bar",
+                                data: {
+                                    labels: s.labels,
+                                    datasets: [
+                                        {
+                                            label: reader,
+                                            data: s.readStrength,
+                                            backgroundColor: [
+                                                "rgba(214, 43, 43, 0.8)",
+                                                "rgba(214, 43, 43, 0.8)",
+                                                "rgba(214, 43, 43, 0.8)",
+                                                "rgba(214, 43, 43, 0.8)"
+                                            ],
+                                            borderColor: [
+                                                "rgba(10,10,10, 1)",
+                                                "rgba(10,10,10, 1)",
+                                                "rgba(10,10,10, 1)",
+                                                "rgba(10,10,10, 1)"
+                                            ],
+                                            borderWidth: 1,
+                                            base: -100
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    responsive: true,
+                                    scales: {
+                                        y: {
+                                            //beginAtZero: true,
+                                            //reverse: true,
+                                            min: -90,
+                                            max: -30,
+                                            title: {
+                                                display: true,
+                                                text: 'RSSI dBm'
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                            readerMap.set(reader, readerChart);
+                        } else {
+                            //console.log("Found " + reader);
+                            readerMap.get(reader).data.datasets[0].data = s.readStrength;
+                            readerMap.get(reader).update();
+                            //readerMap.get(reader).data.labels = s.labels;
+                        }
+                    });
+
+                    connectionStatus.innerHTML = "Connected";
+                }
             };
         </script>
     </body>

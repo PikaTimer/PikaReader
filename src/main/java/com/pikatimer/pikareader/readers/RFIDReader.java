@@ -30,6 +30,7 @@ public interface RFIDReader {
     // Reader Status getStatus()
     public String getType();
     public Boolean isReading();
+    public Boolean isConnected();
     public Integer getID();
     public String getIP();
     public void setClock();

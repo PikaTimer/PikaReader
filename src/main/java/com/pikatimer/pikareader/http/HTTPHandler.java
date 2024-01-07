@@ -59,7 +59,6 @@ public class HTTPHandler {
     private static final List<WsContext> webSocketConnections = new ArrayList<>();
 
 //    ReaderHandler readerHandler = ReaderHandler.getInstance();
-
     private static class SingletonHolder {
 
         private static final HTTPHandler INSTANCE = new HTTPHandler();
@@ -191,8 +190,7 @@ public class HTTPHandler {
                 });
                 ctx.json(data.toString());
             });
-            
-            
+
             // TODO: Status Page
             javalinApp.get("/status", ctx -> {
                 ctx.json(StatusHandler.getInstance().getStatus().toString(4));
@@ -202,7 +200,7 @@ public class HTTPHandler {
             // TODO: Uploader config page
             // Start the javalin server
             javalinApp.start(webConfig.optIntegerObject("Port", 8080));
-            
+
         });
 
         javalinThread.setDaemon(true);
@@ -232,9 +230,9 @@ public class HTTPHandler {
     }
 
     public void sendTag(Status s) {
-        
+
     }
-    
+
     public void postStatus(JSONObject statusReport) {
         statusReport.put("type", "STATUS");
         webSocketConnections.stream().filter(ctx -> ctx.session.isOpen()).forEach(ws -> {

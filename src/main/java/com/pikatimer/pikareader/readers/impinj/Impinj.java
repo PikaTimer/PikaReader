@@ -132,6 +132,12 @@ public class Impinj implements RFIDReader {
 
     }
 
+    @Override
+    public Boolean isConnected(){
+        return reader.isConnected();
+    }
+    
+    
     private Boolean connect() {
         try {
 

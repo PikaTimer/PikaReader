@@ -20,9 +20,103 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         <title>PikaReader</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" >
+
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css">
+        <style>
+            .form-control-sm {
+                font-size: 1.25rem
+            }
+        </style>
     </head>
     <body>
-        <H1>PikaReader</h1>
-        <div>TODO write content</div>
+        <!-- Bootstrap Bundle with Popper -->
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" ></script>
+        <div  id="mainMenu"></div>
+        <div class="container">
+
+            <div class="row justify-content-md-center">
+                <div class="col-md-8 text-center">
+                    <h1 class="display-3">PikaReader</h1>
+                    <div class="display-6" id="unitID"></div>
+                    <div class="display-6" id="time"></div>
+                    <div class="display-6 p-3" id="readingButton"></div>
+                    <div class="display-6" id="readerStatus"></div>
+                    <div class="display-6" id="antennaStatus"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fixed-bottom ">
+            <div class="container">
+                <div class="row justify-content-md-center p-3">
+                    <div class="col-md-8 text-center">
+                        <a href="/trigger/" class="btn btn-primary btn-lg p-4" role="button">Trigger</a>
+                        <div><hr></div>
+                        <div class="display-6 p-1 text-center" id="connectionStatus"></div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <script>
+            // TODO:
+            // Modal for start / stop / trigger
+
+            // do a search/replace for the various status variables
+            var unitID = document.getElementById("unitID");
+            var timeDisplay = document.getElementById("time");
+            var connectionStatus = document.getElementById("connectionStatus");
+            var readingButton = document.getElementById("readingButton");
+            var reading = false;
+            var readerStatus = document.getElementById("readerStatus");
+            var antennaStatus = document.getElementById("antennaStatus");
+
+
+
+            var eventSocket = "ws://" + window.location.host + "/events";
+            webSocket = new WebSocket(eventSocket);
+            webSocket.onmessage = function (message) {
+                const data = message.data;
+                const status = JSON.parse(data);
+
+
+                if (status.type === "STATUS") {
+                    //console.log("Status Message");
+                    //console.log(data);
+                    timeDisplay.innerHTML = "<B>" + status["localTime"].replace("T", " ").replace(/\..*/, "") + "</b>";
+                    unitID.innerHTML = "UnitID: <B>" + status.unitID + "</b>";
+                    reading = status.reading;
+
+                    if (reading) {
+                        readingButton.innerHTML = '<a href="/stop/" class="btn btn-danger btn-lg p-3" role="button">Stop Reader</a>';
+                        antennaStatus.innerHTML = '<a href="/antenna.html" class="btn btn-primary btn-lg p-3" role="button">Antenna Stats</a>';
+                    } else {
+                        readingButton.innerHTML = '<a href="/start/" class="btn btn-success btn-lg p-3" role="button">Start Reader</a>';
+                        antennaStatus.innerHTML = "";
+                    }
+
+                    // for each reader, loop and show the connected / disconnected status
+                    var readerStatusDisplay = "";
+                    status.readers.forEach(function (r) {
+                        readerStatusDisplay += "<div> " + r.name + ": ";
+                        if (r.connected)
+                            readerStatusDisplay += "Connected</div>";
+                        else
+                            readerStatusDisplay += "Disconnected</div>";
+
+                    });
+                    readerStatus.innerHTML = readerStatusDisplay;
+
+                    connectionStatus.innerHTML = "Connected";
+                }
+            };
+            webSocket.onclose = function () {
+                connectionStatus.innerHTML = "Disconnected";
+                // TODO: popup a modal dialog
+            };
+        </script>
+
     </body>
 </html>
