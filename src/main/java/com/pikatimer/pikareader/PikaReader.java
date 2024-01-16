@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 John Garner <segfaultcoredump@gmail.com>
+ * Copyright (C) 2024 John Garner <segfaultcoredump@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -54,7 +54,7 @@ public class PikaReader {
             888        888 888 "88b 888  888 888  T88b  Y8b.     888  888 Y88b 888 Y8b.     888     
             888        888 888  888 "Y888888 888   T88b  "Y8888  "Y888888  "Y88888  "Y8888  888     
 
-                                            ©2023 by John Garner
+                                            ©2024 by John Garner
                                            https://PikaTimer.com/
                                       Released under the GPL-3.0 license.
                                                                                        
@@ -75,14 +75,17 @@ public class PikaReader {
         // Start http listener
         HTTPHandler httpHandler = HTTPHandler.getInstance();
 
-        // TODO: Setup Raspberry PI interfaces
+ 
+        
         // Start broadcast listener so others can find us
         DiscoveryListener.startDiscoveryListener();
         
         // start the status handler
-        StatusHandler statusHandler = StatusHandler.getInstance();
-
-        // This is good for debugging
+        StatusHandler statusHandler = StatusHandler.getInstance();      
+       
+        // TODO: This is good for testing,
+        // We need to switch to a thread join() 
+        // before we go v1.0
         System.out.println("Press Enter to exit.");
         Scanner s = new Scanner(System.in);
         s.nextLine();
@@ -93,7 +96,6 @@ public class PikaReader {
         logger.info("Stopping Jetty");
         httpHandler.stopHTTPD();
 
-        //logger.info("Stopping TagDB");
         logger.info("PikaReader Stopped...");
         
         // Kills any background web sessions that are still hanging out there
