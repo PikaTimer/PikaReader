@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 John Garner <segfaultcoredump@gmail.com>
+ * Copyright (C) 2024 John Garner <segfaultcoredump@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +18,7 @@ package com.pikatimer.pikareader.readers.impinj;
 
 import com.google.auto.service.AutoService;
 import com.impinj.octane.AntennaConfigGroup;
+import com.impinj.octane.FeatureSet;
 import com.impinj.octane.ImpinjReader;
 import com.impinj.octane.OctaneSdkException;
 import com.impinj.octane.ReaderMode;
@@ -55,6 +56,8 @@ public class Impinj implements RFIDReader {
     private String readerIP;
     private Integer readerID;
     private Boolean reading = false;
+
+    private Integer antennaCount = 0;
 
     public Impinj() {
         readerID = -1;
@@ -133,11 +136,10 @@ public class Impinj implements RFIDReader {
     }
 
     @Override
-    public Boolean isConnected(){
+    public Boolean isConnected() {
         return reader.isConnected();
     }
-    
-    
+
     private Boolean connect() {
         try {
 
@@ -145,6 +147,9 @@ public class Impinj implements RFIDReader {
             if (!reader.isConnected()) {
                 logger.info("Connecting to {}", readerIP);
                 reader.connect(readerIP);
+
+                FeatureSet features = reader.queryFeatureSet();
+                antennaCount = Long.valueOf(features.getAntennaCount()).intValue();
 
                 // Make sure the reader's time is correct
                 logger.info("Setting the clock...");
@@ -155,6 +160,8 @@ public class Impinj implements RFIDReader {
                 reader.setReaderStopListener(new ImpinjReaderStartStopListener(this));
 
                 Settings settings = reader.queryDefaultSettings();
+                logger.info("Current Reader Mode: {}", settings.getReaderMode().toString());
+                logger.info("Current Reader Search Mode: {}", settings.getSearchMode().toString());
 
                 ReportConfig report = settings.getReport();
                 report.setIncludeAntennaPortNumber(true);
@@ -165,11 +172,21 @@ public class Impinj implements RFIDReader {
                 report.setIncludeLastSeenTime(Boolean.TRUE);
                 //settings.setReport(report);
 
-                // Let the reader monitor the environment and adapt as needed
-                settings.setReaderMode(ReaderMode.AutoSetDenseReader);
-                //
-                //settings.setReaderMode(ReaderMode.MaxThroughput);
+                // We will default to the static fast mode 
+                // as we have a dynamic tag environment and want a faster
+                // read rate at the cost of a slight cost of range
+                // See https://support.impinj.com/hc/en-us/articles/360000046899
+                // AutoSetStaticFast is not available on 1 and 2 port readers
+                if (antennaCount > 2) {
+                    settings.setReaderMode(ReaderMode.AutoSetStaticFast);
+                } else {
+                    settings.setReaderMode(ReaderMode.AutoSetDenseReader);
+                }
 
+                // We don't want to miss new tags in the 'A' state entering
+                // the field when we are inventorying the 'B' tags
+                // So we will go with the Dual Target B -> A Select mode
+                // See https://support.impinj.com/hc/en-us/articles/202756158
                 settings.setSearchMode(SearchMode.DualTargetBtoASelect);
                 //settings.setSession(1);
                 settings.setTagPopulationEstimate(256);
@@ -190,10 +207,7 @@ public class Impinj implements RFIDReader {
                 // Antenna Settings
                 // Antennas are numbered from 1 -> 4
                 AntennaConfigGroup antennas = settings.getAntennas();
-                //antennas.enableById(new short[]{1});
-                //antennas.enablePolarizedAntennas();
 
-                // TODO: Enable / Disable the antennas in the config
                 antennas.enableAll();
 
                 // Set the power levels and sensitivity
@@ -207,9 +221,8 @@ public class Impinj implements RFIDReader {
                 //antennas.getAntenna((short) 1).setIsMaxTxPower(true);
                 //antennas.getAntenna((short) 1).setTxPowerinDbm(32.0);
                 //antennas.getAntenna((short) 1).setRxSensitivityinDbm(-70);
-                // TODO: Pull this from the config
-                antennas.getAntenna((short) 2).setEnabled(false);
-
+                // TODO: Pull ports enabled / disabled from the reader config
+                //antennas.getAntenna((short) 2).setEnabled(false);
                 reader.setTagReportListener(new ImpinjTagReportListener(readerID));
                 reader.setAntennaChangeListener(new ImpinjAntennaChangeListener(this));
 
@@ -227,7 +240,6 @@ public class Impinj implements RFIDReader {
 
                 logger.debug("Applying Settings");
                 reader.applySettings(settings);
-                
 
             }
 
@@ -237,8 +249,8 @@ public class Impinj implements RFIDReader {
             System.out.println(ex.getMessage());
             logger.error("OctaneSdkExcepton", ex);
         }
-        
-        return (reader != null && reader.isConnected()) ;
+
+        return (reader != null && reader.isConnected());
 
     }
 
@@ -255,7 +267,6 @@ public class Impinj implements RFIDReader {
 
         try {
 
-            //reader = new ImpinjReader();
             if (connect()) {
 
                 // Make sure the reader's time is correct
@@ -289,8 +300,6 @@ public class Impinj implements RFIDReader {
             } catch (OctaneSdkException ex) {
                 logger.error("OctaneSdkExcepton", ex);
             }
-
-            reader.disconnect();
             reading = false;
         }
     }
@@ -314,7 +323,7 @@ public class Impinj implements RFIDReader {
 
         logger.info("Created new IMPINJ Reader with the following config: {}", config.toString(4));
 
-        newReader.connect();
+        Thread.startVirtualThread(() -> newReader.connect());
         return newReader;
     }
 

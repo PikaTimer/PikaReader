@@ -32,6 +32,9 @@ public class ImpinjConnectionLostListener implements ConnectionLostListener {
     public ImpinjConnectionLostListener() {
     }
 
+    // TODO:  Update parent Impinj reader connected status. 
+    // Let it handle the reconnect and then resume reading if it was in reading mode
+    
     @Override
     public void onConnectionLost(ImpinjReader reader) {
         logger.error("Connection to reader lost! {}", reader.getAddress());

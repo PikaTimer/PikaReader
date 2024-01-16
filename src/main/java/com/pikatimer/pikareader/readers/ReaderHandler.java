@@ -95,18 +95,26 @@ public class ReaderHandler {
         }
 
         // itterate through the readers and set them up
+        CountDownLatch latch = new CountDownLatch(readerConfig.getJSONArray("Readers").length());
         readerConfig.getJSONArray("Readers").forEach(r -> {
             JSONObject rc = (JSONObject) r; // FFS
             Integer index = rc.optInt("Index", 0);
             String type = rc.optString("Type", "NOT SET");
 
             if (rfidReaderFactory.containsKey(type)) {
-                RFIDReader reader = rfidReaderFactory.get(type).create(rc);
-                readers.put(index, reader);
+                Thread.startVirtualThread(() -> {
+                    RFIDReader reader = rfidReaderFactory.get(type).create(rc);
+                    readers.put(index, reader);
+                    latch.countDown();
+                });
             } else {
-                logger.error("RFID Reader Config Error! No handler found for RFID Reader type {}" , type);
+                logger.error("RFID Reader Config Error! No handler found for RFID Reader type {}", type);
             }
         });
+        try {
+            latch.await(30, TimeUnit.SECONDS);
+        } catch (InterruptedException ex) {
+        }
 
     }
 
