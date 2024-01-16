@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <!--
-Copyright (C) 2023 John Garner <segfaultcoredump@gmail.com>
+Copyright (C) 2024 John Garner <segfaultcoredump@gmail.com>
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -35,69 +35,181 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         <div  id="mainMenu"></div>
         <div class="container">
 
-            <div class="row justify-content-md-center">
+            <div class="row justify-content-center">
                 <div class="col-md-8 text-center">
                     <h1 class="display-3">PikaReader</h1>
                     <div class="display-6" id="unitID"></div>
-                    <div class="display-6" id="time"></div>
-                    <div class="display-6 p-3" id="readingButton"></div>
-                    <div class="display-6" id="readerStatus"></div>
-                    <div class="display-6" id="antennaStatus"></div>
+                </div>
+            </div>
+            <!-- Start / Stop Reading Button -->
+            <div class="row">
+                <div class="d-grid gap-2 col-6 mx-auto py-2" id="readingButton"></div>
+            </div>
+            <div class="row justify-content-center">
+                <!-- Date / Time Block -->
+                <div class="col-md-3 text-center">
+                    <div class="display-6">Current Time</div>
+                    <div class="display-8" id="date"></div>
+                    <div class="display-8" id="time"></div>
+                    <div class="display-10" id="timezone"></div>
+                </div>
+                <!-- Reader Status Block -->
+                <div class="col-md-3 text-center">
+                    <div class="display-6">Reader Status</div>
+                    <div class="display-8" id="readerStatus"></div>
+                    <div class="display-8" id="readRate"></div>
+                </div>
+            </div>
+
+            <!-- Antenna Status Button  -->
+            <div class="row">
+                <div class="d-grid gap-2 col-6 mx-auto py-2" id="antennaStatus"></div>
+            </div>
+
+            <div class="row">
+                <div class="d-grid gap-2 col-6 mx-auto py-2">
+                    <button type="button" class="btn btn-primary btn-lg p-4" data-bs-toggle="modal" data-bs-target="#triggerModal" onClick="fireTrigger()">Trigger</button>
+                </div>
+            </div>
+
+            <div class="row justify-content-center">
+                <div class="col-md-8 text-center">
+                    <div><hr></div>
+                    <div class="display-10 p-1 text-center" id="connectionStatus"></div>
+                    <div class="display-10 p-1 text-center"><A href="https://github.com/PikaTimer/PikaReader">PikaReader</A> v0.6</div>
                 </div>
             </div>
         </div>
 
-        <div class="fixed-bottom ">
-            <div class="container">
-                <div class="row justify-content-md-center p-3">
-                    <div class="col-md-8 text-center">
-                        <a href="/trigger/" class="btn btn-primary btn-lg p-4" role="button">Trigger</a>
-                        <div><hr></div>
-                        <div class="display-6 p-1 text-center" id="connectionStatus"></div>
+        <!-- Start Modal -->
+        <div class="modal fade" id="startModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="staticBackdropLabel">Start Reader</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="display-8" id="startReaderBody">Starting Reader...</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
                     </div>
                 </div>
+            </div>
+        </div>
 
+        <!-- Stop Modal -->
+        <div class="modal fade" id="stopModalPrompt" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="staticBackdropLabel">Stop Reader</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="display-8">Are you sure you want to stop the reader?</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-danger" data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#stopModal" onClick="stopReader()">Stop</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Really Stop Modal -->
+        <div class="modal fade" id="stopModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="staticBackdropLabel">Stop Reader</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="display-8" id="stopReaderBody">Stopping Reader...</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trigger Modal -->
+        <div class="modal fade" id="triggerModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="staticBackdropLabel">Trigger</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="display-8" id="triggerBody">Creating a Trigger Time...</div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close</button>
+                    </div>
+                </div>
             </div>
         </div>
 
         <script>
             // TODO:
-            // Modal for start / stop / trigger
+            //      Display Gating
+            //      Display Battery, Lat/Long/Alt (if available)
+            //      Uploader status
 
             // do a search/replace for the various status variables
             var unitID = document.getElementById("unitID");
-            var timeDisplay = document.getElementById("time");
+            var date = document.getElementById("date");
+            var time = document.getElementById("time");
+            var timezone = document.getElementById("timezone");
             var connectionStatus = document.getElementById("connectionStatus");
             var readingButton = document.getElementById("readingButton");
             var reading = false;
             var readerStatus = document.getElementById("readerStatus");
+            var readRate = document.getElementById("readRate");
             var antennaStatus = document.getElementById("antennaStatus");
-
-
-
             var eventSocket = "ws://" + window.location.host + "/events";
             webSocket = new WebSocket(eventSocket);
             webSocket.onmessage = function (message) {
                 const data = message.data;
                 const status = JSON.parse(data);
-
-
                 if (status.type === "STATUS") {
                     //console.log("Status Message");
                     //console.log(data);
-                    timeDisplay.innerHTML = "<B>" + status["localTime"].replace("T", " ").replace(/\..*/, "") + "</b>";
-                    unitID.innerHTML = "UnitID: <B>" + status.unitID + "</b>";
-                    reading = status.reading;
 
+                    // Date / Time Box
+                    dateTime = status.localTime.split("T");
+                    date.innerHTML = dateTime[0];
+                    time.innerHTML = dateTime[1].replace(/\..*/, "");
+                    timezone.innerHTML = status.timezone;
+                    unitID.innerHTML = status.unitID;
+                    reading = status.reading;
+                    readRate.innerHTML = "Raw Reads/s " + status["Raw Tag Reads/s"];
                     if (reading) {
-                        readingButton.innerHTML = '<a href="/stop/" class="btn btn-danger btn-lg p-3" role="button">Stop Reader</a>';
-                        antennaStatus.innerHTML = '<a href="/antenna.html" class="btn btn-primary btn-lg p-3" role="button">Antenna Stats</a>';
+                        readingButton.innerHTML =
+                                '<button type="button" class="btn btn-danger btn-lg p-4" data-bs-toggle="modal" data-bs-target="#stopModalPrompt">' +
+                                'Stop Reader' +
+                                '</button>';
+                        antennaStatus.innerHTML = '<a href="/antennaStatus/"' +
+                                '<button type="button" class="btn btn-info btn-lg p-4">' +
+                                'Antenna Stats' +
+                                '</button>' +
+                                '</a>';
                     } else {
-                        readingButton.innerHTML = '<a href="/start/" class="btn btn-success btn-lg p-3" role="button">Start Reader</a>';
+                        readingButton.innerHTML =
+                                '<button type="button" class="btn btn-success btn-lg p-4" data-bs-toggle="modal" data-bs-target="#startModal" onClick="startReader()">' +
+                                'Start Reader' +
+                                '</button>';
                         antennaStatus.innerHTML = "";
                     }
 
                     // for each reader, loop and show the connected / disconnected status
+                    // TODO: 
+                    //      Show Disconnected, Connected, and Reading
+                    //      Show reads/s and total reads
                     var readerStatusDisplay = "";
                     status.readers.forEach(function (r) {
                         readerStatusDisplay += "<div> " + r.name + ": ";
@@ -105,10 +217,8 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                             readerStatusDisplay += "Connected</div>";
                         else
                             readerStatusDisplay += "Disconnected</div>";
-
                     });
                     readerStatus.innerHTML = readerStatusDisplay;
-
                     connectionStatus.innerHTML = "Connected";
                 }
             };
@@ -116,6 +226,42 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                 connectionStatus.innerHTML = "Disconnected";
                 // TODO: popup a modal dialog
             };
+            function startReader() {
+                console.log("Starting Reader...");
+                //var data;
+                fetch("http://" + window.location.host + "/start")
+                        .then((response) => response.json())
+                        .then((data) => {
+                            var startReaderBody = document.getElementById("startReaderBody");
+                            startReaderBody.innerHTML = "Reader started at " + data.timestamp;
+                        });
+
+            }
+
+            function stopReader() {
+                console.log("Stopping Reader...");
+                var data;
+                fetch("http://" + window.location.host + "/stop")
+                        .then((response) => data = response.json())
+                        .then((data) => {
+                            var startReaderBody = document.getElementById("startReaderBody");
+                            stopReaderBody.innerHTML = "Reader stopped at " + data.timestamp;
+                        });
+
+            }
+
+            function fireTrigger() {
+                console.log("firing a Trigger...");
+                var data;
+                fetch("http://" + window.location.host + "/trigger")
+                        .then((response) => data = response.json())
+                        .then((data) => {
+                            var triggerBody = document.getElementById("triggerBody");
+                            triggerBody.innerHTML = "Trigger Fired at<br> " + data.timestamp;
+                        });
+
+            }
+
         </script>
 
     </body>

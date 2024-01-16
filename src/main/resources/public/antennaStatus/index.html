@@ -28,6 +28,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             .form-control-sm {
                 font-size: 1.25rem
             }
+            .chart-container {
+                position: relative;
+                margin: auto;
+                height: 40vh;
+            }
         </style>
     </head>
 
@@ -39,31 +44,28 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
             <div class="row justify-content-md-center">
                 <div class="col-md-8 text-center">
-                    <h1 class="display-3">Antenna Stats</h1>
+                    <h1 class="display-5">Antenna Stats</h1>
                 </div>
             </div>
             <div class="row justify-content-md-center">
                 <div class="col-md-8 text-center">
-                            <div id="charts" ></div>
+                    <div id="charts" ></div>
                 </div>
             </div>
+            <div class="row justify-content-md-center p-3">
+                <div class="col-md-8 text-center">
+                    <a href="/" class="btn btn-primary btn-lg p-2" role="button">Home</a>
+                    <div><hr></div>
+                    <div class="display-8 p-1 text-center" id="connectionStatus"></div>
+                </div>
+            </div>
+
         </div>
 
 
 
 
-        <div class="fixed-bottom ">
-            <div class="container">
-                <div class="row justify-content-md-center p-3">
-                    <div class="col-md-8 text-center">
-                        <a href="/" class="btn btn-primary btn-lg p-2" role="button">Home</a>
-                        <div><hr></div>
-                        <div class="display-6 p-1 text-center" id="connectionStatus"></div>
-                    </div>
-                </div>
 
-            </div>
-        </div>
         <script src="/js/chart-4.4.1.js"></script>
         <script>
             var eventSocket = "ws://" + window.location.host + "/events";
@@ -74,12 +76,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             const readerMap = new Map();
             const rootChartDiv = document.getElementById("charts");
             webSocket = new WebSocket(eventSocket);
-            
+
             webSocket.onclose = function () {
                 connectionStatus.innerHTML = "Disconnected";
                 // TODO: popup a modal dialog
             };
-            
+
             webSocket.onmessage = function (message) {
                 const data = message.data;
                 const status = JSON.parse(data);
@@ -97,7 +99,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                         // do we already have the reader chart setup?
                         // If not, create a new chart
                         if (!readerMap.has(reader)) {
-                            rootChartDiv.insertAdjacentHTML('beforeend', '<div><canvas id="' + reader + '"></canvas></div>');
+                            rootChartDiv.insertAdjacentHTML('beforeend', '<div class="chart-container"><canvas id="' + reader + '"></canvas></div>');
 
                             console.log("rootChartDiv: " + rootChartDiv.innerHTML);
                             const ctx = document.getElementById(reader);
@@ -107,7 +109,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                                     labels: s.labels,
                                     datasets: [
                                         {
-                                            label: reader,
+                                            label: "Read Strength",
                                             data: s.readStrength,
                                             backgroundColor: [
                                                 "rgba(214, 43, 43, 0.8)",
@@ -127,11 +129,19 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                                     ]
                                 },
                                 options: {
+                                    plugins: {
+                                        title: {
+                                            display: true,
+                                            text: reader,
+                                            font: {
+                                                size: 18
+                                            }
+                                        }
+                                    },
                                     responsive: true,
+                                    maintainAspectRatio: false,
                                     scales: {
                                         y: {
-                                            //beginAtZero: true,
-                                            //reverse: true,
                                             min: -90,
                                             max: -30,
                                             title: {
@@ -145,9 +155,18 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                             readerMap.set(reader, readerChart);
                         } else {
                             //console.log("Found " + reader);
+                            //
+                            // Merge the label and the status
+                            var label = [];
+                            for (i in s.labels) {
+                                label.push([s.labels[i], s.status[i]]);
+                            }
+                            
+                            // Update the data and display labels
+                            readerMap.get(reader).data.labels = label;
                             readerMap.get(reader).data.datasets[0].data = s.readStrength;
                             readerMap.get(reader).update();
-                            //readerMap.get(reader).data.labels = s.labels;
+
                         }
                     });
 
