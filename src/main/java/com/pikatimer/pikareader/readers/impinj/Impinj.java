@@ -84,8 +84,10 @@ public class Impinj implements RFIDReader {
 
     @Override
     public void setClock() {
-        logger.trace("Entering Impinj::setClock()");
+        logger.trace("Entering Impinj::setClock() for {}", readerIP);
         try {
+
+            logger.info("Setting the clock for {}...", readerIP);
 
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy.MM.dd'-'HH:mm:ss");
 
@@ -112,7 +114,7 @@ public class Impinj implements RFIDReader {
                 Thread.sleep(10);
             }
 
-            logger.debug("setClock() Start Timestamp: " + Instant.now());
+            logger.debug("{} setClock() Start Timestamp: {}", readerIP, Instant.now());
 
             cmd = "config system time " + OffsetDateTime.now(ZoneOffset.UTC).plusNanos(100000000).format(formatter);
             logger.debug("Sending command '" + cmd + "' to " + readerIP);
@@ -121,9 +123,10 @@ public class Impinj implements RFIDReader {
 
             logger.trace("Raw Reply");
             logger.trace(reply);
-            logger.debug("setClock() Finish Timestamp: " + Instant.now());
+            logger.debug("{} setClock() Finish Timestamp: {}", readerIP, Instant.now());
 
             rshell.close();
+            logger.info("Clock set for {}", readerIP);
 
         } catch (OctaneSdkException ex) {
             logger.error("OctaneSdkExcepton", ex);
@@ -140,7 +143,7 @@ public class Impinj implements RFIDReader {
         return reader.isConnected();
     }
 
-    private Boolean connect() {
+    protected Boolean connect() {
         try {
 
             //reader = new ImpinjReader();
@@ -152,16 +155,14 @@ public class Impinj implements RFIDReader {
                 antennaCount = Long.valueOf(features.getAntennaCount()).intValue();
 
                 // Make sure the reader's time is correct
-                logger.info("Setting the clock...");
                 setClock();
-                logger.info("Clock set");
 
                 reader.setReaderStartListener(new ImpinjReaderStartStopListener(this));
                 reader.setReaderStopListener(new ImpinjReaderStartStopListener(this));
 
                 Settings settings = reader.queryDefaultSettings();
-                logger.info("Current Reader Mode: {}", settings.getReaderMode().toString());
-                logger.info("Current Reader Search Mode: {}", settings.getSearchMode().toString());
+                //logger.info("Current Reader Mode: {}", settings.getReaderMode().toString());
+                //logger.info("Current Reader Search Mode: {}", settings.getSearchMode().toString());
 
                 ReportConfig report = settings.getReport();
                 report.setIncludeAntennaPortNumber(true);
@@ -177,6 +178,7 @@ public class Impinj implements RFIDReader {
                 // read rate at the cost of a slight cost of range
                 // See https://support.impinj.com/hc/en-us/articles/360000046899
                 // AutoSetStaticFast is not available on 1 and 2 port readers
+                // so fall back to AutoSetDenseReader
                 if (antennaCount > 2) {
                     settings.setReaderMode(ReaderMode.AutoSetStaticFast);
                 } else {
@@ -201,8 +203,6 @@ public class Impinj implements RFIDReader {
                 // Enable Connection Monitoring
                 settings.getKeepalives().setEnableLinkMonitorMode(true);
                 settings.getKeepalives().setLinkDownThreshold(5);
-                // set up a listener for connection Lost
-                reader.setConnectionLostListener(new ImpinjConnectionLostListener());
 
                 // Antenna Settings
                 // Antennas are numbered from 1 -> 4
@@ -212,8 +212,9 @@ public class Impinj implements RFIDReader {
 
                 // Set the power levels and sensitivity
                 powerLevel = ImpinjPowerLevels.getLevel(readerConfig.optString("Power Level"));
-                logger.info("Setting power level for reader {} to {}", readerID, powerLevel.getLevel());
+                logger.info("Setting power level for reader {} to {} ({})", readerID, powerLevel.getLevel(), powerLevel.getDBm());
                 antennas.setIsMaxRxSensitivity(true);
+                //antennas.setIsMaxTxPower(true);
                 antennas.setTxPowerinDbm(powerLevel.getDBm());
 
                 // TODO: Per-Antenna power levels
@@ -241,10 +242,14 @@ public class Impinj implements RFIDReader {
                 logger.debug("Applying Settings");
                 reader.applySettings(settings);
 
+                // set up a listener for connection Lost
+                reader.setConnectionLostListener(new ImpinjConnectionLostListener(this));
+
             }
 
         } catch (OctaneSdkException ex) {
-            logger.error("OctaneSdkExcepton", ex);
+            logger.error("OctaneSdkExcepton connecting to {} with stack trace {}", readerIP, ex.getMessage());
+            reader.disconnect();
         } catch (Exception ex) {
             System.out.println(ex.getMessage());
             logger.error("OctaneSdkExcepton", ex);
@@ -270,9 +275,7 @@ public class Impinj implements RFIDReader {
             if (connect()) {
 
                 // Make sure the reader's time is correct
-                logger.info("Setting the clock...");
                 setClock();
-                logger.info("Clock set");
 
                 logger.info("Starting reader {}", reader.getAddress());
                 reader.start();

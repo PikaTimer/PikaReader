@@ -19,17 +19,22 @@ package com.pikatimer.pikareader.readers.impinj;
 import com.impinj.octane.AntennaChangeListener;
 import com.impinj.octane.AntennaEvent;
 import com.impinj.octane.ImpinjReader;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author John Garner <segfaultcoredump@gmail.com>
  */
 public class ImpinjAntennaChangeListener implements AntennaChangeListener {
+    
+        private static final Logger logger = LoggerFactory.getLogger(AntennaChangeListener.class);
+
+    
     Impinj reader = null;
     @Override
     public void onAntennaChanged(ImpinjReader r, AntennaEvent e) {
-        System.out.println("Antenna Change--port: " + e.getPortNumber()
-                + " state: " + e.getState().toString());
+        logger.info("Antenna Status Change: Reader: {} Port: {} State: {}",reader.getID(), e.getPortNumber(), e.getState().toString());
         reader.getAntennaStatus().put((int) e.getPortNumber(), e.getState().toString().replace("Antenna", ""));
     }
     

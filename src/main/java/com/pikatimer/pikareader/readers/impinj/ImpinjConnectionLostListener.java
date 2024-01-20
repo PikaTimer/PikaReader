@@ -19,6 +19,7 @@ package com.pikatimer.pikareader.readers.impinj;
 import com.impinj.octane.ConnectionLostListener;
 import com.impinj.octane.ImpinjReader;
 import com.impinj.octane.OctaneSdkException;
+import com.pikatimer.pikareader.readers.ReaderHandler;
 import org.slf4j.LoggerFactory;
 
 /**
@@ -28,29 +29,43 @@ import org.slf4j.LoggerFactory;
 public class ImpinjConnectionLostListener implements ConnectionLostListener {
 
     private static final org.slf4j.Logger logger = LoggerFactory.getLogger(ImpinjConnectionLostListener.class);
+    private final Impinj reader;
 
-    public ImpinjConnectionLostListener() {
+    public ImpinjConnectionLostListener(Impinj reader) {
+        this.reader = reader;
     }
 
-    // TODO:  Update parent Impinj reader connected status. 
+    // TODO:  Update parent Impinj impinjReader connected status. 
     // Let it handle the reconnect and then resume reading if it was in reading mode
-    
     @Override
-    public void onConnectionLost(ImpinjReader reader) {
-        logger.error("Connection to reader lost! {}", reader.getAddress());
-        reader.disconnect();
-        try {
-            logger.info("Attempting to reconnect...");
+    public void onConnectionLost(ImpinjReader impinjReader) {
+        logger.error("Connection to reader {} lost!", impinjReader.getAddress());
+        impinjReader.disconnect();
 
-            reader.connect();
-        } catch (OctaneSdkException ex) {
-            logger.info("Reconnect timeout. Sleeping 15 seconds and will Try again...");
+        logger.info("Attempting to reconnect to {}...", impinjReader.getAddress());
+
+        Integer retryLimit = 10;
+
+        while (retryLimit-- > 0 && !impinjReader.isConnected()) {
             try {
-                Thread.sleep(5000);
-
+                impinjReader.connect();
+                impinjReader.disconnect();
                 reader.connect();
-            } catch (OctaneSdkException | InterruptedException ex1) {
-                logger.error("2nd Try Failure!", ex1);
+                logger.info("Reconnected to {}",reader.getIP());
+                logger.info("Reconnected reader status: Reading {}", reader.isReading());
+                if (ReaderHandler.getInstance().isReading()) {
+                    logger.info("Putting reader {} into read mode...",reader.getIP());
+                    reader.stopReading();
+                    reader.startReading();
+                    logger.info("Done restarting {}",reader.getIP());
+                }
+            } catch (OctaneSdkException ex) {
+                logger.info("Reconnect timeout. Sleeping 15 seconds and will Try again...");
+                try {
+                    Thread.sleep(10000);
+                } catch (InterruptedException ex1) {
+                    logger.error("Retry Thread Interrupted!", ex1);
+                }
             }
         }
     }
