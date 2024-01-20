@@ -149,7 +149,7 @@ public class TagReadProcessor implements Runnable {
 
         }
 
-        logger.trace("TagRead: " + tr.getEPCDecimal() + " Timestamp:" + tr.getTimestamp().format(formatter) + " RSSI: " + tr.rssi);
+        logger.trace("TagRead: {} Timestamp: {} Reader: {} Antenna: {} RSSI: {}", tr.getEPCDecimal(), tr.getTimestamp().format(formatter), tr.readerID, tr.antennaPortNumber, tr.rssi);
         tagQueue.add(tr);
 
         

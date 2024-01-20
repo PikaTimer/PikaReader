@@ -125,12 +125,13 @@ public class HTTPHandler {
             javalinApp.get("/debug", ctx -> {
                 StringBuilder response = new StringBuilder();
                 response.append("<html><head><Title>PikaReader Debug</title></head><body>\n");
-                DebugLogHolder.eventMap.keySet().stream().sorted().forEach(e -> {
-                    ILoggingEvent event = DebugLogHolder.eventMap.get(e);
-                    response.append(e.toString()).append(": ");
+                DebugLogHolder.getEventList().forEach(event -> {
+                    //ILoggingEvent event = DebugLogHolder.eventMap.get(e);
+                    response.append(event.getInstant()).append(": ");
                     response.append(event.getLevel().toString()).append(": ");
                     response.append(event.getLoggerName()).append(": ");
                     response.append(event.getFormattedMessage());
+                    //if (event.hasCallerData()) response.append(event.getCallerData());
                     response.append("<BR>\n");
                 });
                 response.append("<body><html>\n");
