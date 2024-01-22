@@ -20,9 +20,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
         <title>PikaReader</title>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" >
+        <link href="/css/bootstrap-5.3.2.min.css" rel="stylesheet" >
 
-        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.9.1/font/bootstrap-icons.css">
+        <link rel="stylesheet" href="/css/bootstrap-icons-1.9.1.css">
         <style>
             .form-control-sm {
                 font-size: 1.25rem
@@ -31,7 +31,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     </head>
     <body>
         <!-- Bootstrap Bundle with Popper -->
-        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" ></script>
+        <script src="/js/bootstrap.bundle-5.3.2.min.js" ></script>
         <div  id="mainMenu"></div>
         <div class="container">
 
@@ -156,9 +156,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
         <script>
             // TODO:
-            //      Display Gating
-            //      Display Battery, Lat/Long/Alt (if available)
-            //      Uploader status
+            //      Gating, last read chip and time
+            //      Uploader Status
+            //      Battery, Lat/Long/Alt (if available)
 
             // do a search/replace for the various status variables
             var unitID = document.getElementById("unitID");
@@ -213,10 +213,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                     var readerStatusDisplay = "";
                     status.readers.forEach(function (r) {
                         readerStatusDisplay += "<div> " + r.name + ": ";
-                        if (r.connected)
-                            readerStatusDisplay += "Connected</div>";
-                        else
-                            readerStatusDisplay += "Disconnected</div>";
+                        readerStatusDisplay += r.status;
                     });
                     readerStatus.innerHTML = readerStatusDisplay;
                     connectionStatus.innerHTML = "Connected";

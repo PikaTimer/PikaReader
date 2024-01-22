@@ -76,6 +76,11 @@ public class Impinj implements RFIDReader {
     public Boolean isReading() {
         return reading;
     }
+    
+    @Override
+    public String getStatus(){
+        return reading?"Reading":reader.isConnected()?"Connected":"Disconnected";
+    }
 
     @Override
     public String getType() {

@@ -105,6 +105,7 @@ public class StatusHandler {
                 reader.put("portStatus", r.getAntennaStatus());
                 reader.put("type", r.getType());
                 reader.put("connected", r.isConnected());
+                reader.put("status",r.getStatus());
                 readerStatus.put(reader);
                 
                 readerMap.put("Reader " + r.getID(), r);
