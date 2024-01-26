@@ -121,9 +121,9 @@ public class TagReadProcessor implements Runnable {
                 tagRouter.processTagReads(tagMap.values()); 
 
                 // Update some stats
-                String lastChipRead = tagMap.values().stream()
+                TagRead lastChipRead = tagMap.values().stream()
                         .sorted((t1, t2) -> t1.epochMilli.compareTo(t2.epochMilli))
-                        .skip(tagMap.size() - 1).findFirst().get().getEPCDecimal();
+                        .skip(tagMap.size() - 1).findFirst().get();
                 StatusHandler statusHandler = StatusHandler.getInstance();
                 statusHandler.incrementReadCount(tagMap.size());
                 statusHandler.lastChipRead(lastChipRead);
@@ -149,7 +149,7 @@ public class TagReadProcessor implements Runnable {
 
         }
 
-        logger.trace("TagRead: {} Timestamp: {} Reader: {} Antenna: {} RSSI: {}", tr.getEPCDecimal(), tr.getTimestamp().format(formatter), tr.readerID, tr.antennaPortNumber, tr.rssi);
+        logger.debug("TagRead: {} Timestamp: {} Reader: {} Antenna: {} RSSI: {}", tr.getEPCDecimal(), tr.getTimestamp().format(formatter), tr.readerID, tr.antennaPortNumber, tr.rssi);
         tagQueue.add(tr);
 
         

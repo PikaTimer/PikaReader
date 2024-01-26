@@ -49,6 +49,11 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             </div>
             <div class="row justify-content-md-center">
                 <div class="col-md-8 text-center">
+                    <div class="display-7" id="readRate"></div>
+                </div>
+            </div>
+            <div class="row justify-content-md-center">
+                <div class="col-md-8 text-center">
                     <div id="charts" ></div>
                 </div>
             </div>
@@ -75,6 +80,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
             const readerMap = new Map();
             const rootChartDiv = document.getElementById("charts");
+            var readRate = document.getElementById("readRate");
             webSocket = new WebSocket(eventSocket);
 
             webSocket.onclose = function () {
@@ -88,6 +94,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
                 if (status.type === "STATUS") {
                     //console.log("Status Message");
+
+                    readRate.innerHTML = "Raw Reads/s " + status["Raw Tag Reads/s"];
+
                     var readerPortStats = status.readerPortStats;
 
                     const readers = Object.keys(status.readerPortStats);
@@ -161,7 +170,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
                             for (i in s.labels) {
                                 label.push([s.labels[i], s.status[i]]);
                             }
-                            
+
                             // Update the data and display labels
                             readerMap.get(reader).data.labels = label;
                             readerMap.get(reader).data.datasets[0].data = s.readStrength;

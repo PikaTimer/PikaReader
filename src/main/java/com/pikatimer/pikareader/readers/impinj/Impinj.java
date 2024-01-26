@@ -34,6 +34,7 @@ import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
 import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -180,7 +181,7 @@ public class Impinj implements RFIDReader {
 
                 // We will default to the static fast mode 
                 // as we have a dynamic tag environment and want a faster
-                // read rate at the cost of a slight cost of range
+                // read rate at the cost of a slight loss of range
                 // See https://support.impinj.com/hc/en-us/articles/360000046899
                 // AutoSetStaticFast is not available on 1 and 2 port readers
                 // so fall back to AutoSetDenseReader
@@ -219,16 +220,30 @@ public class Impinj implements RFIDReader {
                 powerLevel = ImpinjPowerLevels.getLevel(readerConfig.optString("Power Level"));
                 logger.info("Setting power level for reader {} to {} ({})", readerID, powerLevel.getLevel(), powerLevel.getDBm());
                 antennas.setIsMaxRxSensitivity(true);
-                //antennas.setIsMaxTxPower(true);
-                antennas.setTxPowerinDbm(powerLevel.getDBm());
+                
+                // Set the setIsMaxTxPower to false otherwise 
+                // the system ignores the setTxPowerinDbm call. 
+                if(ImpinjPowerLevels.MAX.equals(powerLevel)) {
+                    antennas.setIsMaxTxPower(true);
+                } else {
+                    antennas.setIsMaxTxPower(false);
+                    antennas.setTxPowerinDbm(powerLevel.getDBm());
+                }
 
-                // TODO: Per-Antenna power levels
-                //antennas.getAntenna((short) 1).setIsMaxRxSensitivity(true);
-                //antennas.getAntenna((short) 1).setIsMaxTxPower(true);
-                //antennas.getAntenna((short) 1).setTxPowerinDbm(32.0);
-                //antennas.getAntenna((short) 1).setRxSensitivityinDbm(-70);
-                // TODO: Pull ports enabled / disabled from the reader config
-                //antennas.getAntenna((short) 2).setEnabled(false);
+                // Enable / Disable antennas based on the reader config
+                antennas.enableAll();
+                JSONObject antennaConfig = readerConfig.optJSONObject("Antenna Config");
+                if (antennaConfig != null) {
+                    antennaConfig.keySet().forEach(k -> {
+                        if (antennaConfig.optString(k).toLowerCase().startsWith("disable")) try {
+                            antennas.getAntenna(Integer.valueOf(k)).setEnabled(false);
+                        } catch (Exception ex) {
+                            logger.warn("Exception disabling antenna port {} for reader {}", k, readerID);
+                        }
+                    });
+                }
+                
+               
                 reader.setTagReportListener(new ImpinjTagReportListener(readerID));
                 reader.setAntennaChangeListener(new ImpinjAntennaChangeListener(this));
 
@@ -244,7 +259,7 @@ public class Impinj implements RFIDReader {
                     }
                 });
 
-                logger.debug("Applying Settings");
+                logger.debug("Applying Settings for readerID {}", readerID);
                 reader.applySettings(settings);
 
                 // set up a listener for connection Lost
@@ -257,7 +272,7 @@ public class Impinj implements RFIDReader {
             reader.disconnect();
         } catch (Exception ex) {
             System.out.println(ex.getMessage());
-            logger.error("OctaneSdkExcepton", ex);
+            logger.error("Impinj Connect Exception", ex);
         }
 
         return (reader != null && reader.isConnected());

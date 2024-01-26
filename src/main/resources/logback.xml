@@ -37,7 +37,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
     <logger name="org.eclipse" level="WARN" />
     <logger name="io.javalin" level="WARN" />
 
-    <logger name="com.pikatimer" level="trace" />
+    <logger name="com.pikatimer" level="debug" />
     
 </configuration>
 

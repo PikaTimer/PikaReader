@@ -23,6 +23,7 @@ import com.pikatimer.pikareader.readers.ReaderHandler;
 import com.pikatimer.pikareader.tags.TagRead;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -52,8 +53,10 @@ public class StatusHandler {
     private static final HTTPHandler httpHandler = HTTPHandler.getInstance();
     private static final PikaConfig pikaConfig = PikaConfig.getInstance();
 
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd' 'HH:mm:ss.SSS");
+
     private Integer totalReads = 0;
-    private String lastChipRead = "";
+    private TagRead lastChipRead;
 
     private JSONObject lastStatus = new JSONObject();
 
@@ -85,13 +88,16 @@ public class StatusHandler {
             logger.trace("Setting reading stats");
             statusReport.put("reading", readerHandler.isReading());
             statusReport.put("totalReads", totalReads);
-            statusReport.put("lastChipRead", lastChipRead);
+            if (lastChipRead != null) {
+                statusReport.put("lastChipRead", lastChipRead.getEPCDecimal());
+                statusReport.put("lastChipReadTime", lastChipRead.getTimestamp().format(formatter));
+            }
             statusReport.put("unitID", pikaConfig.getStringValue("UnitID"));
 
             logger.trace("Getting readers");
 
             Collection<RFIDReader> readers = readerHandler.getReaders();
-            Map<String,RFIDReader> readerMap = new HashMap<>();
+            Map<String, RFIDReader> readerMap = new HashMap<>();
 
             // Track the strongest read on a given antenna
             Map<String, Map<Integer, Double>> antennaReadStrengthMap = new HashMap<>(32);
@@ -105,19 +111,16 @@ public class StatusHandler {
                 reader.put("portStatus", r.getAntennaStatus());
                 reader.put("type", r.getType());
                 reader.put("connected", r.isConnected());
-                reader.put("status",r.getStatus());
+                reader.put("status", r.getStatus());
                 readerStatus.put(reader);
-                
+
                 readerMap.put("Reader " + r.getID(), r);
-
-
 
                 Map<Integer, Double> s = new HashMap<>(4);
                 r.getAntennaStatus().keySet().stream().sorted().forEach(v -> {
                     s.put(v, -100.0);
                 });
                 antennaReadStrengthMap.put(r.getID().toString(), s);
-
 
             });
             statusReport.put("readers", readerStatus);
@@ -158,7 +161,7 @@ public class StatusHandler {
                 JSONArray portLabels = new JSONArray();
                 JSONArray portStatus = new JSONArray();
                 JSONObject stats = new JSONObject();
-                
+
                 antennaReadStrengthMap.get(a).keySet().stream().sorted().forEach(k -> {
                     portStatus.put(readerMap.get("Reader " + a).getAntennaStatus().get(k));
                     readStats.put(antennaReadStrengthMap.get(a).get(k));
@@ -209,14 +212,14 @@ public class StatusHandler {
 
     public void clearReadCount() {
         totalReads = 0;
-        lastChipRead = "";
+        lastChipRead = null;
     }
 
     public void incrementReadCount(Integer r) {
         totalReads += r;
     }
 
-    public void lastChipRead(String lastChipRead) {
+    public void lastChipRead(TagRead lastChipRead) {
         this.lastChipRead = lastChipRead;
     }
 
