@@ -17,6 +17,9 @@
 
 package com.pikatimer.pikareader.readers;
 
+import java.util.Map;
+import org.json.JSONObject;
+
 /**
  *
  * @author John Garner <segfaultcoredump@gmail.com>
@@ -24,18 +27,20 @@ package com.pikatimer.pikareader.readers;
 
 public interface RFIDReader {
     
-    // set hostname
-    
-    // start reading
-    
-    // stop reading
-    
-    // set clock
-    
     // Reader Status getStatus()
-    
+    public String getType();
+    public Boolean isReading();
+    public Boolean isConnected();
+    public Integer getID();
+    public String getIP();
+    public String getStatus();
     public void setClock();
     public void startReading();
     public void stopReading();
-    public void setPower(String powerLevel);
+    //public void setPower(String powerLevel);
+    
+
+    public RFIDReader create(JSONObject rc);
+    
+    public Map<Integer,String> getAntennaStatus();
 }

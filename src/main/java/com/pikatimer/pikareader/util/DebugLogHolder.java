@@ -18,7 +18,9 @@ package com.pikatimer.pikareader.util;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
-import java.time.Instant;
+import com.pikatimer.pikareader.tags.TagRead;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -27,17 +29,21 @@ import java.util.concurrent.ConcurrentMap;
  *
  * @author John Garner <segfaultcoredump@gmail.com>
  */
-public class DebugLogHolder  extends AppenderBase<ILoggingEvent> {
+public class DebugLogHolder extends AppenderBase<ILoggingEvent> {
 
-    public static final ConcurrentMap<Instant, ILoggingEvent> eventMap = new ConcurrentHashMap<>();
+    //public static final ConcurrentMap<Integer, ILoggingEvent> eventMap = new ConcurrentHashMap<>();
+    private static final List<ILoggingEvent> eventList = new ArrayList<>();
+    //Integer eventCounter = 1;
 
     @Override
     protected void append(ILoggingEvent event) {
-        eventMap.put(event.getInstant(), event);
-        //System.out.println("DebugLogHolder: " + event.getInstant().toString() + " event: " + event.getFormattedMessage());
+        synchronized (this) {
+            eventList.add(event);
+            //eventMap.put(eventCounter++, event);
+        }
     }
-    
-    public Map<Instant, ILoggingEvent> getEventMap() {
-        return eventMap;
+
+    public static List<ILoggingEvent> getEventList() {
+        return new ArrayList<ILoggingEvent>(eventList);
     }
 }

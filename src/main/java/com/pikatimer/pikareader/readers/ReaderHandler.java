@@ -17,9 +17,13 @@
 package com.pikatimer.pikareader.readers;
 
 import com.pikatimer.pikareader.conf.PikaConfig;
-import com.pikatimer.pikareader.readers.impinj.Impinj;
-import java.util.ArrayList;
-import java.util.List;
+import com.pikatimer.pikareader.status.StatusHandler;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.ServiceLoader;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -32,10 +36,14 @@ import org.slf4j.LoggerFactory;
 public class ReaderHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(ReaderHandler.class);
+
     private static final PikaConfig pikaConfig = PikaConfig.getInstance();
-    private static final List<RFIDReader> readers = new ArrayList();
-    
-    private final JSONObject readerConfig; 
+    private static final Map<Integer, RFIDReader> readers = new HashMap<>();
+    private static final Map<String, RFIDReader> rfidReaderFactory = new HashMap<>();
+
+    private final JSONObject readerConfig;
+
+    private Boolean isReading = false;
 
     /**
      * SingletonHolder is loaded on the first execution of
@@ -56,7 +64,19 @@ public class ReaderHandler {
     private ReaderHandler() {
         // get the config and build the hierarchy
         readerConfig = pikaConfig.getKey("Reader");
-        
+
+        // We will use a service loader to make it easeir for somebody to add
+        // a new reader type by just wiring up their own RFIDReader implementation
+        // and attaching a jar file. 
+        ServiceLoader<RFIDReader> serviceLoader = ServiceLoader.load(RFIDReader.class);
+
+        for (RFIDReader service : serviceLoader) {
+            logger.info("Loaded {} RFIDReader handler.", service.getType());
+            rfidReaderFactory.put(service.getType(), service);
+        }
+
+        logger.info("Found " + rfidReaderFactory.size() + " services!");
+
         // if we have an empty config, build out the defaults
         if (readerConfig.isEmpty()) {
             readerConfig.put("Gating", 3); // Default Gating of 3 seconds
@@ -66,46 +86,87 @@ public class ReaderHandler {
             defaultReader.put("Index", 0);
             defaultReader.put("Type", "IMPINJ");
             defaultReader.put("IP", "127.0.0.1");
-            defaultReader.put("Power Level" , "HIGH");
+            defaultReader.put("Power Level", "HIGH");
             defaultReaders.put(defaultReader);
-            
+
             readerConfig.put("Readers", defaultReaders);
-            
+
             pikaConfig.putObject("Reader", readerConfig);
         }
-        
+
         // itterate through the readers and set them up
+        CountDownLatch latch = new CountDownLatch(readerConfig.getJSONArray("Readers").length());
         readerConfig.getJSONArray("Readers").forEach(r -> {
-           JSONObject rc = (JSONObject) r;
-           Integer index = rc.optInt("Index", 0);
-           String ip = rc.optString("IP","127.0.0.1");
-           String powerLevel = rc.optString("Power Level", "HIGH");
-           String type = rc.optString("Type", "IMPINJ");
-           
-           RFIDReader reader = switch (type) {
-                        case "IMPINJ" -> new Impinj(index, ip);
-                        default -> new Impinj(index, ip);
-                    };
-           
-           reader.setPower(powerLevel);
-           
-           readers.add(reader);
-        
+            JSONObject rc = (JSONObject) r; // FFS
+            Integer index = rc.optInt("Index", 0);
+            String type = rc.optString("Type", "NOT SET");
+
+            if (rfidReaderFactory.containsKey(type)) {
+                Thread.startVirtualThread(() -> {
+                    RFIDReader reader = rfidReaderFactory.get(type).create(rc);
+                    readers.put(index, reader);
+                    latch.countDown();
+                });
+            } else {
+                logger.error("RFID Reader Config Error! No handler found for RFID Reader type {}", type);
+            }
         });
-        
-        
+        try {
+            latch.await(30, TimeUnit.SECONDS);
+        } catch (InterruptedException ex) {
+        }
+
     }
-    
+
     public void setClocks() {
-        readers.stream().parallel().forEach(r -> r.setClock());
+        readers.values().stream().parallel().forEach(r -> r.setClock());
     }
-    
+
+    public Boolean isReading() {
+        return isReading;
+    }
+
     public void startReading() {
-        readers.stream().parallel().forEach(r -> r.startReading());
+        CountDownLatch latch = new CountDownLatch(readers.size());
+
+        // Start all readers in parallel. 
+        // A parallelStream() is a suggestion but this guarantees it
+        logger.info("Starting Readers");
+        readers.values().stream().forEach(r -> {
+            Thread.startVirtualThread(() -> {
+                r.startReading();
+                latch.countDown();
+            });
+        });
+        try {
+            latch.await(30, TimeUnit.SECONDS);
+
+        } catch (InterruptedException ex) {
+        }
+        isReading = true;
+        StatusHandler.getInstance().clearReadCount();
+
+        logger.info("Readers Started");
+
     }
-    
+
     public void stopReading() {
-        readers.stream().parallel().forEach(r -> r.stopReading());
+        logger.info("Stopping Readers");
+        CountDownLatch latch = new CountDownLatch(readers.size());
+        readers.values().parallelStream().forEach(r -> {
+            r.stopReading();
+            latch.countDown();
+        });
+        try {
+            latch.await(10, TimeUnit.SECONDS);
+        } catch (InterruptedException ex) {
+        }
+        isReading = false;
+        logger.info("Readers Stopped");
+    }
+
+    public Collection<RFIDReader> getReaders() {
+        return readers.values();
     }
 
 }

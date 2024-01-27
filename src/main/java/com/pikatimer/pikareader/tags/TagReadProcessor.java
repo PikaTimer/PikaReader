@@ -18,6 +18,7 @@ package com.pikatimer.pikareader.tags;
 
 import com.pikatimer.pikareader.conf.PikaConfig;
 import com.pikatimer.pikareader.readers.ReaderGatingStyle;
+import com.pikatimer.pikareader.status.StatusHandler;
 import java.awt.Toolkit;
 import java.time.Duration;
 import java.time.format.DateTimeFormatter;
@@ -36,14 +37,15 @@ import org.slf4j.LoggerFactory;
  */
 public class TagReadProcessor implements Runnable {
 
-    private static final BlockingQueue<TagRead> tagQueue = new ArrayBlockingQueue(100000);
+    private static final BlockingQueue<TagRead> tagQueue = new ArrayBlockingQueue<>(100000);
     private static final Logger logger = LoggerFactory.getLogger(TagReadProcessor.class);
     private static final PikaConfig pikaConfig = PikaConfig.getInstance();
     private static final TagReadRouter tagRouter = TagReadRouter.getInstance();
+    private static final StatusHandler statusHandler = StatusHandler.getInstance();
 
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd' 'HH:mm:ss.SSS");
 
-    Map<String, TagRead> seenTags = new HashMap();
+    Map<String, TagRead> seenTags = new HashMap<>();
     Integer defaultGating = 3000;
 
     private Thread tagProcessingThread;
@@ -70,7 +72,7 @@ public class TagReadProcessor implements Runnable {
         try {
             while (true) {
 
-                List<TagRead> tags = new ArrayList();
+                List<TagRead> tags = new ArrayList<>();
 
                 Integer gating = pikaConfig.getKey("Reader").optIntegerObject("Gating") * 1000;
                 if (gating.equals(0)) {
@@ -84,10 +86,10 @@ public class TagReadProcessor implements Runnable {
                 Thread.sleep(gating); // Gating Time
                 tagQueue.drainTo(tags);
 
-                logger.info("Recieved {} raw tag reads to process", tags.size());
+                logger.debug("Recieved {} raw tag reads to process", tags.size());
 
-                Map<String, TagRead> tagMap = new HashMap(1000);
-                Map<String, Double> antennaStatusMap = new HashMap(32);
+                Map<String, TagRead> tagMap = new HashMap<>(1000);
+                Map<String, Double> antennaStatusMap = new HashMap<>(32);
                                
                 // split the tags into a hash, saving the strongest read
                 tags.forEach(t -> {
@@ -111,32 +113,20 @@ public class TagReadProcessor implements Runnable {
                         tagMap.put(key, t);
                     }
 
-                    // Track the strongest read on a given antenna
-                    String antennaID = t.readerID + ":" + t.antennaPortNumber;
-                    if (antennaStatusMap.containsKey(antennaID)) {
-                        if (antennaStatusMap.get(antennaID).compareTo(t.rssi) < 0) {
-                            antennaStatusMap.put(antennaID, t.rssi);
-                        }
-                    } else {
-                        antennaStatusMap.put(antennaID, t.rssi);
-                    }
+                    
 
                 });
 
                 // For each read, post it to the handler
                 tagRouter.processTagReads(tagMap.values()); 
-                
-                // Generate the antennaStatus Map
 
-                if (logger.isDebugEnabled()) {
-                    tagMap.keySet().stream().sorted().forEach(e -> {
-                        TagRead t = tagMap.get(e);
-                        logger.debug("Strongest Read: " + t.getEPCDecimal() + " Timestamp: " + t.timestamp.format(formatter)
-                                + " RSSI: " + t.rssi + " ReaderID " + t.getReaderID() + " Antenna: " + t.getReaderAntenna());
-                    });
-                }
-                
-                // TODO: send the antenna Status to the reader handler
+                // Update some stats
+                TagRead lastChipRead = tagMap.values().stream()
+                        .sorted((t1, t2) -> t1.epochMilli.compareTo(t2.epochMilli))
+                        .skip(tagMap.size() - 1).findFirst().get();
+                StatusHandler statusHandler = StatusHandler.getInstance();
+                statusHandler.incrementReadCount(tagMap.size());
+                statusHandler.lastChipRead(lastChipRead);
 
             }
         } catch (InterruptedException ex) {
@@ -150,7 +140,6 @@ public class TagReadProcessor implements Runnable {
         // Start the tag processing thread
         if (tagProcessingThread == null) {
 
-            //tagProcessingThread = Thread.ofVirtual().name("TagReadProcessingThread").start(this);
             tagProcessingThread = new Thread(TagReadProcessor.getInstance());
             tagProcessingThread.setName("TagProcessingThread");
             tagProcessingThread.setDaemon(true);
@@ -160,9 +149,12 @@ public class TagReadProcessor implements Runnable {
 
         }
 
-        logger.trace("TagRead: " + tr.getEPCDecimal() + " Timestamp:" + tr.getTimestamp().format(formatter) + " RSSI: " + tr.rssi);
+        logger.debug("TagRead: {} Timestamp: {} Reader: {} Antenna: {} RSSI: {}", tr.getEPCDecimal(), tr.getTimestamp().format(formatter), tr.readerID, tr.antennaPortNumber, tr.rssi);
         tagQueue.add(tr);
 
+        
+        statusHandler.postRead(tr);
+        
         // Beep if we have not seen the tag before or have not seen it in the last 5 seconds. 
         // TODO:  Replace the AWT Toolkit beep with something better
         if (seenTags.containsKey(tr.hexEPC)) {

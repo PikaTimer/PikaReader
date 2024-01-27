@@ -3,12 +3,27 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.pikatimer</groupId>
   <artifactId>PikaReader</artifactId>
-  <version>0.5</version>
+  <version>0.6</version>
   <build>
     <plugins>
       <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.11.0</version>
+        <configuration>
+          <release>21</release>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>com.google.auto.service</groupId>
+              <artifactId>auto-service</artifactId>
+              <version>1.0.2</version>
+            </path>
+          </annotationProcessorPaths>
+          <debug>false</debug>
+        </configuration>
+      </plugin>
+      <plugin>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>3.1.0</version>
+        <version>3.3.0</version>
         <configuration>
           <archive>
             <manifest>
@@ -29,12 +44,8 @@
               <goal>shade</goal>
             </goals>
             <configuration>
-              <archive>
-                <manifest>
-                  <addClasspath>true</addClasspath>
-                  <mainClass>com.pikatimer.pikareader.PikaReader</mainClass>
-                </manifest>
-              </archive>
+              <shadedArtifactAttached>true</shadedArtifactAttached>
+              <shadedClassifierName>uber</shadedClassifierName>
             </configuration>
           </execution>
         </executions>
@@ -46,5 +57,6 @@
     <exec.mainClass>com.pikatimer.pikareader.PikaReader</exec.mainClass>
     <maven.compiler.source>21</maven.compiler.source>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <maven.javadoc.skip>true</maven.javadoc.skip>
   </properties>
 </project>

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<!--
+Copyright (C) 2023 John Garner <segfaultcoredump@gmail.com>
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-->
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title>PikaReader</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="/css/bootstrap-5.3.2.min.css" rel="stylesheet" >
+
+        <link rel="stylesheet" href="/css/bootstrap-icons-1.9.1.css">
+        <style>
+            .form-control-sm {
+                font-size: 1.25rem
+            }
+            .chart-container {
+                position: relative;
+                margin: auto;
+                height: 40vh;
+            }
+        </style>
+    </head>
+
+    <body>
+        <!-- Bootstrap Bundle with Popper -->
+        <script src="/js/bootstrap.bundle-5.3.2.min.js" ></script>
+        <div  id="mainMenu"></div>
+        <div class="container">
+
+            <div class="row justify-content-md-center">
+                <div class="col-md-8 text-center">
+                    <h1 class="display-5">Antenna Stats</h1>
+                </div>
+            </div>
+            <div class="row justify-content-md-center">
+                <div class="col-md-8 text-center">
+                    <div class="display-7" id="readRate"></div>
+                </div>
+            </div>
+            <div class="row justify-content-md-center">
+                <div class="col-md-8 text-center">
+                    <div id="charts" ></div>
+                </div>
+            </div>
+            <div class="row justify-content-md-center p-3">
+                <div class="col-md-8 text-center">
+                    <a href="/" class="btn btn-primary btn-lg p-2" role="button">Home</a>
+                    <div><hr></div>
+                    <div class="display-8 p-1 text-center" id="connectionStatus"></div>
+                </div>
+            </div>
+
+        </div>
+
+
+
+
+
+        <script src="/js/chart-4.4.1.js"></script>
+        <script>
+            var eventSocket = "ws://" + window.location.host + "/events";
+            console.log("Server Host" + window.location.host);
+
+            var connectionStatus = document.getElementById("connectionStatus");
+
+            const readerMap = new Map();
+            const rootChartDiv = document.getElementById("charts");
+            var readRate = document.getElementById("readRate");
+            webSocket = new WebSocket(eventSocket);
+
+            webSocket.onclose = function () {
+                connectionStatus.innerHTML = "Disconnected";
+                // TODO: popup a modal dialog
+            };
+
+            webSocket.onmessage = function (message) {
+                const data = message.data;
+                const status = JSON.parse(data);
+
+                if (status.type === "STATUS") {
+                    //console.log("Status Message");
+
+                    readRate.innerHTML = "Raw Reads/s " + status["Raw Tag Reads/s"];
+
+                    var readerPortStats = status.readerPortStats;
+
+                    const readers = Object.keys(status.readerPortStats);
+
+                    readers.forEach(reader => {
+                        var s = readerPortStats[reader];
+                        //console.log("Reader: " + reader);
+
+                        // do we already have the reader chart setup?
+                        // If not, create a new chart
+                        if (!readerMap.has(reader)) {
+                            rootChartDiv.insertAdjacentHTML('beforeend', '<div class="chart-container"><canvas id="' + reader + '"></canvas></div>');
+
+                            console.log("rootChartDiv: " + rootChartDiv.innerHTML);
+                            const ctx = document.getElementById(reader);
+                            const readerChart = new Chart(ctx, {
+                                type: "bar",
+                                data: {
+                                    labels: s.labels,
+                                    datasets: [
+                                        {
+                                            label: "Read Strength",
+                                            data: s.readStrength,
+                                            backgroundColor: [
+                                                "rgba(214, 43, 43, 0.8)",
+                                                "rgba(214, 43, 43, 0.8)",
+                                                "rgba(214, 43, 43, 0.8)",
+                                                "rgba(214, 43, 43, 0.8)"
+                                            ],
+                                            borderColor: [
+                                                "rgba(10,10,10, 1)",
+                                                "rgba(10,10,10, 1)",
+                                                "rgba(10,10,10, 1)",
+                                                "rgba(10,10,10, 1)"
+                                            ],
+                                            borderWidth: 1,
+                                            base: -100
+                                        }
+                                    ]
+                                },
+                                options: {
+                                    plugins: {
+                                        title: {
+                                            display: true,
+                                            text: reader,
+                                            font: {
+                                                size: 18
+                                            }
+                                        }
+                                    },
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    scales: {
+                                        y: {
+                                            min: -90,
+                                            max: -20,
+                                            title: {
+                                                display: true,
+                                                text: 'RSSI dBm'
+                                            }
+                                        }
+                                    }
+                                }
+                            });
+                            readerMap.set(reader, readerChart);
+                        } else {
+                            //console.log("Found " + reader);
+                            //
+                            // Merge the label and the status
+                            var label = [];
+                            for (i in s.labels) {
+                                label.push([s.labels[i], s.status[i]]);
+                            }
+
+                            // Update the data and display labels
+                            readerMap.get(reader).data.labels = label;
+                            readerMap.get(reader).data.datasets[0].data = s.readStrength;
+                            readerMap.get(reader).update();
+
+                        }
+                    });
+
+                    connectionStatus.innerHTML = "Connected";
+                }
+            };
+        </script>
+    </body>
+</html>

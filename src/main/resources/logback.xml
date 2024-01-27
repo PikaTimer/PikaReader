@@ -27,16 +27,17 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
             <level>INFO</level>
         </filter>
     </appender>
-    <appender name="map" class="com.pikatimer.pikareader.util.DebugLogHolder"/>
+    <appender name="DebugLogHolder" class="com.pikatimer.pikareader.util.DebugLogHolder"/>
     <root level="info">
         <appender-ref ref="STDOUT" />
-        <appender-ref ref="map" />
+        <appender-ref ref="DebugLogHolder" />
     </root>
+    
     <logger name="org.llrp.ltk" level="WARN" />
     <logger name="org.eclipse" level="WARN" />
     <logger name="io.javalin" level="WARN" />
 
-    <logger name="com.pikatimer" level="TRACE" />
+    <logger name="com.pikatimer" level="debug" />
     
 </configuration>
 

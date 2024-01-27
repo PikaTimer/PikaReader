@@ -43,8 +43,8 @@ import org.slf4j.LoggerFactory;
  */
 public class TagDB {
 
-    private static final BlockingQueue<Collection<TagRead>> tagQueue = new ArrayBlockingQueue(100);
-    private static final Logger logger = LoggerFactory.getLogger(TagReadProcessor.class);
+    private static final BlockingQueue<Collection<TagRead>> tagQueue = new ArrayBlockingQueue<>(100);
+    private static final Logger logger = LoggerFactory.getLogger(TagDB.class);
     private static final PikaConfig pikaConfig = PikaConfig.getInstance();
     private final JSONObject dbConfig;
     private static final List<TagRead> tagList = new ArrayList<>();
@@ -89,17 +89,6 @@ public class TagDB {
 
         Thread t = new Thread(() -> {
 
-            // Setup the EclipseStore DB and populate the root object
-//            logger.info("Starting EclipseStore with DB path of {}", dbPath.toAbsolutePath());
-//
-//            EmbeddedStorageManager storageManager = EmbeddedStorageConfigurationBuilder.New()
-//                    .setBackupDirectory(dbBackupPath.toString())
-//                    .setStorageDirectory(dbPath.toString())
-//                    .createEmbeddedStorageFoundation()
-//                    .createEmbeddedStorageManager();
-//            storageManager.setRoot(tagDBRoot);
-//            storageDB = storageManager.start();
-            //storageDB = EmbeddedStorage.start(tagDBRoot, storageManager);
             Instant start = Instant.now();
             try (Stream<Path> walk = Files.walk(dbPath)) {
                 walk.parallel().filter(Files::isRegularFile).forEach(f -> {
@@ -141,7 +130,7 @@ public class TagDB {
                     // target file of <dbbapth>/YYYY/MM/DD/HH/HH-MM-ss.SSS.dat 
                     File outputFile = new File(dbPath.toString() + LocalDateTime.now().format(formatter));
 
-                    logger.info("Writing to data to {}", outputFile.getAbsolutePath());
+                    logger.debug("Writing to data to {}", outputFile.getAbsolutePath());
 
                     // Make the parent path
                     outputFile.getParentFile().mkdirs();

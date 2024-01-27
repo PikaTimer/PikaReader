@@ -16,9 +16,11 @@
  */
 package com.pikatimer.pikareader.readers.impinj;
 
-import com.impinj.octane.AntennaChangeListener;
-import com.impinj.octane.AntennaEvent;
 import com.impinj.octane.ImpinjReader;
+import com.impinj.octane.ReaderStartEvent;
+import com.impinj.octane.ReaderStartListener;
+import com.impinj.octane.ReaderStopEvent;
+import com.impinj.octane.ReaderStopListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,19 +28,25 @@ import org.slf4j.LoggerFactory;
  *
  * @author John Garner <segfaultcoredump@gmail.com>
  */
-public class ImpinjAntennaChangeListener implements AntennaChangeListener {
+class ImpinjReaderStartStopListener implements ReaderStartListener,ReaderStopListener {
+    private static final Logger logger = LoggerFactory.getLogger(ImpinjReaderStartStopListener.class);
     
-        private static final Logger logger = LoggerFactory.getLogger(AntennaChangeListener.class);
+    Impinj impinjReader;
 
-    
-    Impinj reader = null;
+    ImpinjReaderStartStopListener(Impinj reader) {
+        impinjReader = reader;
+    }
+
     @Override
-    public void onAntennaChanged(ImpinjReader r, AntennaEvent e) {
-        logger.info("Antenna Status Change: Reader: {} Port: {} State: {}",reader.getID(), e.getPortNumber(), e.getState().toString());
-        reader.getAntennaStatus().put((int) e.getPortNumber(), e.getState().toString().replace("Antenna", ""));
+    public void onReaderStart(ImpinjReader reader, ReaderStartEvent rse) {
+        logger.info("ReaderID {} started: {}",impinjReader.getID());
+        impinjReader.setReading(true);
+    }
+
+    @Override
+    public void onReaderStop(ImpinjReader reader, ReaderStopEvent rse) {
+        logger.info("ReaderID {} stopped: {}",impinjReader.getID());
+        impinjReader.setReading(false);
     }
     
-    ImpinjAntennaChangeListener(Impinj reader){
-        this.reader = reader;
-    }
 }

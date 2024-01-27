@@ -14,17 +14,18 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-package com.pikatimer.pikareader.tags;
+package com.pikatimer.pikareader.status;
 
-import java.util.ArrayList;
-import java.util.List;
+import org.json.JSONObject;
 
 /**
  *
  * @author John Garner <segfaultcoredump@gmail.com>
  */
-class TagDBRoot {
-    
-    protected List<TagRead> tags = new ArrayList<>();
+public class Status {
+
+    public JSONObject toJSONObject() {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    }
     
 }

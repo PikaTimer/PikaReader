@@ -31,7 +31,7 @@ import org.slf4j.LoggerFactory;
  */
 public class TagReadRouter implements Runnable {
 
-    private static final BlockingQueue<Collection<TagRead>> tagQueue = new ArrayBlockingQueue(100);
+    private static final BlockingQueue<Collection<TagRead>> tagQueue = new ArrayBlockingQueue<>(100);
     private static final Logger logger = LoggerFactory.getLogger(TagReadRouter.class);
     private static final PikaConfig pikaConfig = PikaConfig.getInstance();
     private static final HTTPHandler httpHandler = HTTPHandler.getInstance();
@@ -93,7 +93,7 @@ public class TagReadRouter implements Runnable {
 
         }
 
-        logger.info("TagRouter::processTagReads: Recieved {} new tags to process.", tr.size());
+        logger.debug("TagRouter::processTagReads: Recieved {} new tags to process.", tr.size());
         tagQueue.add(tr);
 
         logger.trace("Exiting TagReadRouter::processTagReads");

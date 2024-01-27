@@ -27,13 +27,12 @@ import com.impinj.octane.TagReport;
 import com.impinj.octane.TagReportListener;
 import com.pikatimer.pikareader.conf.PikaConfig;
 import com.pikatimer.pikareader.tags.TagReadProcessor;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 
 import java.util.List;
-import java.util.regex.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,26 +43,9 @@ public class ImpinjTagReportListener implements TagReportListener {
 
     private final TagReadProcessor tagReadProcessor = TagReadProcessor.getInstance();
     private Integer readerID = -1;
-    ZoneId zoneId = ZoneId.systemDefault();
 
     public ImpinjTagReportListener(Integer readerID) {
         this.readerID = readerID;
-
-        try {
-            Pattern pattern = Pattern.compile("[+-]\\d+");
-            zoneId = switch (PikaConfig.getInstance().getStringValue("Timezone").toUpperCase()) {
-                case "", "AUTO" ->
-                    ZoneId.systemDefault();
-                case String s when pattern.matcher(s).matches() ->
-                    ZoneId.ofOffset("UTC", ZoneOffset.of(PikaConfig.getInstance().getStringValue("Timezone")));
-                default ->
-                    ZoneId.of(PikaConfig.getInstance().getStringValue("Timezone"));
-            };
-        } catch (Exception e) {
-            logger.error("Unable to parse timezone {}, falling back to {}", PikaConfig.getInstance().getStringValue("Timezone"), zoneId.toString());
-        }
-
-        logger.info("ImpinjTagReporteListener using zoneID " + zoneId.toString() + " Offset: " + ZonedDateTime.now(zoneId).getOffset());
 
     }
 
@@ -71,11 +53,15 @@ public class ImpinjTagReportListener implements TagReportListener {
     public void onTagReported(ImpinjReader reader, TagReport report) {
         List<Tag> tags = report.getTags();
 
+        ZoneId zoneId = PikaConfig.getInstance().getTimezoneId();
+
         for (Tag t : tags) {
 
             TagRead tr = new TagRead();
 
             tr.setReaderID(readerID);
+            
+            logger.trace("Tag Read: {} at {}",  t.getEpc().toHexString(), t.getLastSeenTime().getLocalDateTime().toInstant().toString());
 
             /*
             System.out.print(" EPC: " + t.getEpc().toHexString());
@@ -89,12 +75,19 @@ public class ImpinjTagReportListener implements TagReportListener {
             tr.setEPC(t.getEpc().toHexString());
 //            tr.setReaderIP(reader.getAddress());
 
+            // Save the antenna port number
             // short can't directly convert to an Integer. Thank kids. 
             tr.setReaderAntenna(Integer.valueOf(t.getAntennaPortNumber()));
 
-            // Impinj returns a Date object, even if it is really a LocalDateTime under the covers. So we get to convert it. 
-            tr.setTimestamp(LocalDateTime.ofInstant(t.getLastSeenTime().getLocalDateTime().toInstant(), zoneId));
+            // Stash the RSSI as it helps with the antenna stats 
             tr.setPeakRSSI(t.getPeakRssiInDbm());
+
+            // Impinj returns a Date object in UTC, So we get to convert it. 
+            Instant timestamp = t.getLastSeenTime().getLocalDateTime().toInstant();
+
+            tr.setEpochMilli(timestamp.toEpochMilli());
+            tr.setTZOffset(ZonedDateTime.ofInstant(timestamp, zoneId).getOffset().toString());
+            tr.setTimestamp(LocalDateTime.ofInstant(timestamp, zoneId));
 
             tagReadProcessor.processTagRead(tr);
 

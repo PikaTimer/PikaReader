@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2023 John Garner <segfaultcoredump@gmail.com>
+ * Copyright (C) 2024 John Garner <segfaultcoredump@gmail.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,17 +19,10 @@ package com.pikatimer.pikareader;
 import com.pikatimer.pikareader.conf.PikaConfig;
 import com.pikatimer.pikareader.http.HTTPHandler;
 import com.pikatimer.pikareader.readers.ReaderHandler;
+import com.pikatimer.pikareader.status.StatusHandler;
 import com.pikatimer.pikareader.tags.TagDB;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.net.UnknownHostException;
-import java.time.ZoneId;
-import java.util.Enumeration;
-import java.util.HexFormat;
+import com.pikatimer.pikareader.util.DiscoveryListener;
 import java.util.Scanner;
-import java.util.logging.Level;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,15 +54,13 @@ public class PikaReader {
             888        888 888 "88b 888  888 888  T88b  Y8b.     888  888 Y88b 888 Y8b.     888     
             888        888 888  888 "Y888888 888   T88b  "Y8888  "Y888888  "Y88888  "Y8888  888     
 
-                                            ©2023 by John Garner
+                                            ©2024 by John Garner
                                            https://PikaTimer.com/
                                       Released under the GPL-3.0 license.
                                                                                        
                                                                                                                    """);
         // Read Config
         PikaConfig pikaConfig = PikaConfig.getInstance();
-
-        
 
         // Startup DB;
         TagDB tagDB = TagDB.getInstance();
@@ -78,14 +69,23 @@ public class PikaReader {
         ReaderHandler readerHandler = ReaderHandler.getInstance();
 
         // Hard code this until the Web UI and buttons are setup
-        readerHandler.setClocks();
-        readerHandler.startReading();
+        //readerHandler.setClocks();
+        //readerHandler.startReading();
+
         // Start http listener
         HTTPHandler httpHandler = HTTPHandler.getInstance();
 
-        // TODO: Setup Raspberry PI interfaces
+ 
+        
         // Start broadcast listener so others can find us
-        // 
+        DiscoveryListener.startDiscoveryListener();
+        
+        // start the status handler
+        StatusHandler statusHandler = StatusHandler.getInstance();      
+       
+        // TODO: This is good for testing,
+        // We need to switch to a thread join() 
+        // before we go v1.0
         System.out.println("Press Enter to exit.");
         Scanner s = new Scanner(System.in);
         s.nextLine();
@@ -96,12 +96,10 @@ public class PikaReader {
         logger.info("Stopping Jetty");
         httpHandler.stopHTTPD();
 
-        //try {
-        //    Thread.sleep(5000);
-        //} catch (InterruptedException ex) {
-        //}
-        //logger.info("Stopping TagDB");
-        //tagDB.stopDB();
         logger.info("PikaReader Stopped...");
+        
+        // Kills any background web sessions that are still hanging out there
+        System.exit(0);
+        
     }
 }
