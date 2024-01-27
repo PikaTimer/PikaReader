@@ -16,7 +16,6 @@
  */
 package com.pikatimer.pikareader.http;
 
-import ch.qos.logback.classic.spi.ILoggingEvent;
 import com.pikatimer.pikareader.conf.PikaConfig;
 import com.pikatimer.pikareader.readers.ReaderHandler;
 import com.pikatimer.pikareader.status.Status;

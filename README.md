@@ -17,18 +17,19 @@ It also permits the setup and usage of a remote or offline reader for on-course 
 * Antenna read stats via API
 * User Selectable gating to reduce the number of tags transmitted to the timing application
 * Debug log available via built in http server
+* Antenna Status Display via web UI
 
 ## Planned 
 * Integration with PikaTimer application 
 * Integration with PikaRelay for remote retrieval of data
-* Antenna Status Display
+
 * Raspberry PI integration 
     * GPIO Button for start/stop/trigger
-    * I2C Status Display
+    * I2C LCD Status Display
 * Support for IP Based Readers:
     * Zebra / Mororola FX Series 
     * ThingMagic IZAR 
-* Support for TSL and ThingMagic / Jadak UART based readers
+* Support for TSL and ThingMagic/Jadak UART based readers
 * Support for generic LLRP Readers with reduced functionality
 * Reader level tag filtering
 * Web Based configuration tool
@@ -37,11 +38,29 @@ It also permits the setup and usage of a remote or offline reader for on-course 
 ## Usage
 Requires OpenJRE 21 or newer. 
 
-Launch the jar file: java -jar PikaReader-0.5.jar 
+Launch the jar file: java -jar PikaReader-0.6.jar 
 
 Press the space bar to stop. 
 
-The first time the app is run, it will automatically create a config file. You will need to edit the ~/.PikaReader.conf file to configure the app. 
+The default web UI port is http on port 8080. 
+
+REST api paths:
+- / -- Basic System information and web UI for control of PikaReader 
+- /start -- Start the reader
+- /stop -- Stop the reader
+- /rewind -- rewind all data from PikaReader
+- /rewind/<from> -- Rewind all data after <from> date/time. Time in ISO format (YYYY-MM-DDTHH:MM:ss)
+- /rewind/<from>/<to> -- Rewind data between from and to
+- /debug -- Dump the debug log to the browser
+- /trigger -- Record a "trigger" time (chip = 0, reader = 0, antenna = 0) to mark an event
+- /antennaStatus - Show the current antenna port stats
+- /status - dump the current reader status
+- /events -- WebSocket (ws://) that will send a message for each read or status update
+
+## Notice!
+The first time the app is run, it will automatically create a basic config file. 
+You will need to quit PikaReader and then edit the ~/.PikaReader.conf file to configure the app. 
+Once this is done you can restart the app and being using itd. 
 
 
 
